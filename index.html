@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Расчет программы пробивки для пульта Kinco</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e40af">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://w3.org' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231e40af'/%3E%3Ctext x='256' y='290' font-family='Arial,sans-serif' font-size='150' font-weight='bold' fill='white' text-anchor='middle'%3EKINCO%3C/text%3E%3Ccircle cx='140' cy='380' r='22' fill='%23eab308'/%3E%3Ccircle cx='256' cy='380' r='22' fill='%23eab308'/%3E%3Ccircle cx='372' cy='380' r='22' fill='%23eab308'/%3E%3C/svg%3E">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('./sw.js');
+    });
+  }
+</script>
+
+<style>
+  :root {
+    --primary: #1e40af;
+    --primary-hover: #1d4ed8;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --border: #cbd5e1;
+    --text: #0f172a;
+    --muted: #64748b;
+    --yellow: #fef9c3;
+    --yellow-border: #eab308;
+    --green-bg: #dcfce7;
+    --green-text: #166534;
+    --red-bg: #fee2e2;
+    --red-text: #991b1b;
+  }
+  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-size: 14px; }
+  .topbar { background: var(--primary); color: #fff; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 0.3px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
+  .btn { border: 1px solid transparent; border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: 0.15s; }
+  .btn-light { background: #fff; color: var(--primary); }
+  .btn-light:hover { background: #e2e8f0; }
+  .btn-green { background: #15803d; color: #fff; }
+  .btn-green:hover { background: #166534; }
+  .btn-blue { background: #2563eb; color: #fff; border-color: #60a5fa; }
+  .btn-blue:hover { background: #1d4ed8; }
+  .btn-red { background: #dc2626; color: #fff; }
+  .btn-red:hover { background: #b91c1c; }
+  .btn-sm { padding: 4px 8px; font-size: 12px; }
+  #script-warning { background: #fee2e2; color: #991b1b; border-bottom: 2px solid #dc2626; padding: 12px 16px; font-weight: 600; text-align: center; }
+  .tabs { background: #fff; border-bottom: 1px solid var(--border); padding: 0 16px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .tab-btn { background: none; border: none; border-bottom: 3px solid transparent; padding: 12px 14px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .badge { background: #e2e8f0; color: var(--text); border-radius: 999px; padding: 1px 7px; font-size: 11px; margin-left: 4px; }
+  .container { max-width: 1400px; margin: 14px auto; padding: 0 12px; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  .orders-bar { background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .marks-bar { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .marks-bar-title { font-weight: 700; margin-right: 4px; color: var(--primary); }
+  .mark-pill { border: 1px solid var(--border); background: #f8fafc; color: var(--text); border-radius: 6px; padding: 6px 12px; font-weight: 600; cursor: pointer; }
+  .mark-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .mark-pill.err { border-color: #ef4444; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  .card-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; font-weight: 700; color: var(--primary); font-size: 14px; }
+  .form-row { display: grid; grid-template-columns: 1fr 180px; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .form-row label { font-size: 13px; color: #334155; }
+  input[type="text"], input[type="number"], select { width: 100%; padding: 6px 9px; border: 1px solid #94a3b8; border-radius: 5px; font-size: 13px; font-weight: 600; background: #fff; }
+  input.inp-yellow, select.inp-yellow { background: var(--yellow); border-color: var(--yellow-border); }
+  input:focus, select:focus { outline: 2px solid #3b82f6; border-color: #2563eb; }
+  .status-val { padding: 5px 10px; border-radius: 5px; font-weight: 700; font-size: 13px; text-align: center; }
+  .st-ok { background: var(--green-bg); color: var(--green-text); }
+  .st-err { background: var(--red-bg); color: var(--red-text); }
+  .st-neutral { background: #f1f5f9; color: var(--text); }
+  .table-wrap { overflow-x: auto; max-height: 560px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; }
+  th { background: #f8fafc; font-weight: 700; position: sticky; top: 0; z-index: 2; color: #1e293b; }
+  tr:last-child td { border-bottom: none; }
+  .tfoot-row td { background: #e2e8f0; font-weight: 700; position: sticky; bottom: 0; }
+  .row-active td { background: #f8fafc; }
+  .row-inactive td { color: #94a3b8; }
+  .hint-bar { font-size: 12px; color: #475569; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; padding: 6px 10px; margin-bottom: 10px; }
+  #print-all-container { display: none; }
+  @media print {
+    @page { size: A4 portrait; margin: 10mm; }
+    .topbar, .tabs, .orders-bar, .marks-bar, .no-print, .hint-bar { display: none !important; }
+    body { background: #fff; font-size: 12px; }
+    .container { margin: 0; padding: 0; max-width: 100%; }
+    #pane-kinco > .grid-2:first-of-type { display: none !important; }
+    #pane-kinco > .grid-2:last-of-type { display: block !important; }
+    #pane-kinco > .grid-2:last-of-type > .card:first-child { display: none !important; }
+    #kinco-body .row-inactive { display: none !important; }
+    .card { border: none; box-shadow: none; padding: 0; }
+    .card-header { color: #000; border-bottom: 2px solid #000; font-size: 15px; margin-bottom: 8px; }
+    #kinco-mark-summary, .kinco-summary-box { border: 1px solid #000 !important; background: #fff !important; margin-bottom: 8px; }
+    .table-wrap { max-height: none; overflow: visible; border: 1px solid #000; }
+    th, td { border: 1px solid #000; padding: 4px 6px; color: #000 !important; }
+    th { background: #f1f5f9 !important; }
+    body.printing-all .container { display: none !important; }
+    body.printing-all #print-all-container { display: block !important; }
+    .print-page-break { page-break-after: always; break-after: page; }
+    .print-page-break:last-child { page-break-after: auto; break-after: auto; }
+  }
+    /* Адаптация под планшеты и смартфоны */
+  @media (max-width: 768px) {
+    body { font-size: 15px; }
+    .topbar { padding: 10px 12px; gap: 8px; }
+    .topbar h1 { font-size: 14px; width: 100%; text-align: center; }
+    .toolbar { width: 100%; justify-content: center; gap: 5px; }
+    .toolbar .btn { padding: 8px 10px; font-size: 12px; flex: 1 1 auto; justify-content: center; }
+
+    /* Горизонтальная лента вкладок без переноса в 3 этажа */
+    .tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 8px;
+      gap: 2px;
+    }
+    .tab-btn {
+      white-space: nowrap;
+      padding: 12px 10px;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .container { padding: 0 8px; margin: 10px auto; }
+    .card { padding: 10px; }
+
+    /* Панель заказов и марок на всю ширину под палец */
+    .orders-bar { padding: 10px; gap: 8px; }
+    .orders-bar select,
+    .orders-bar input[type="text"],
+    .orders-bar input[type="date"] {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      font-size: 16px;
+      padding: 8px 10px;
+    }
+    .orders-bar .btn,
+    .marks-bar .btn {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    .mark-pill {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    /* Поля форм: подпись сверху, крупное поле ввода снизу (16px отключает авто-зум браузера) */
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .form-row label { font-size: 13px; font-weight: 600; }
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select {
+      font-size: 16px;
+      padding: 8px 10px;
+    }
+
+    /* Компактные таблицы с плавной прокруткой пальцем */
+    .table-wrap { -webkit-overflow-scrolling: touch; }
+    table { font-size: 12px; }
+    th, td { padding: 6px 5px; }
+    #segments-body input[type="number"] {
+      min-width: 68px;
+      padding: 6px;
+      font-size: 15px;
+    }
+  }
+
+</style>
+</head>
+<body>
+<div id="script-warning">Внимание: JavaScript заблокирован предпросмотром. Откройте файл в браузере (Chrome, Яндекс Браузер, Edge или Safari).</div>
+<div class="topbar">
+  <h1>РАСЧЕТ ПРОГРАММЫ ПРОБИВКИ ДЛЯ ПУЛЬТА KINCO</h1>
+  <div class="toolbar">
+    <button class="btn btn-light" onclick="saveOrderJson()">💾 Сохранить заказ (.json)</button>
+	    <button class="btn btn-light" onclick="saveFullBackupJson()">📦 Сохранить всю базу (.json)</button>
+    <button class="btn btn-light" onclick="document.getElementById('file-loader').click()">📂 Загрузить заказ</button>
+    <input type="file" id="file-loader" accept=".json" style="display:none" onchange="loadOrderJson(event)">
+    <button class="btn btn-green" onclick="exportExcelCsv()">📊 Экспорт в Excel (.csv)</button>
+    <button class="btn btn-blue" onclick="window.print()">🖨️ Печать / PDF</button>
+    <button class="btn btn-blue" onclick="printAllMarks()">🖨️ Печать всех марок</button>
+	    <button class="btn btn-green" onclick="printAllOrdersSummary()">🖨️ Печать сводного по всем заказам</button>
+
+  </div>
+</div>
+<div class="tabs">
+  <button class="tab-btn active" id="tab-btn-kinco" onclick="switchTab('kinco')">1. Расчет пульта Kinco</button>
+  <button class="tab-btn" id="tab-btn-general" onclick="switchTab('general')">2. Общий отчет (по профилям)</button>
+  <button class="tab-btn" id="tab-btn-summary" onclick="switchTab('summary')">3. Сводная заявка металла</button>
+  <button class="tab-btn" id="tab-btn-profiles" onclick="switchTab('profiles')">4. Справочник профилей <span class="badge" id="profiles-count">0</span></button>
+</div>
+
+<div class="container">
+  <div class="orders-bar no-print">
+    <span class="marks-bar-title">📁 Заказ:</span>
+    <select id="order-select" style="width:auto; min-width:200px; max-width:300px;" onchange="selectOrder(this.value)"></select>
+    <label style="font-weight:600; font-size:13px; color:#1e3a8a;">Название заказа:</label>
+    <input type="text" id="order-name-inp" class="inp-yellow" style="width:auto; min-width:220px; max-width:340px;" placeholder="Введите номер или объект..." oninput="updateOrderName(this.value)">
+	    <label style="font-weight:600; font-size:13px; color:#1e3a8a;">Дата:</label>
+    <input type="date" id="order-date-inp" class="inp-yellow" style="width:auto; padding:5px 8px; border:1px solid #eab308; border-radius:5px; font-weight:600;" onchange="updateOrderDate(this.value)">
+
+    <button class="btn btn-blue btn-sm" onclick="addOrder()">+ Новый заказ</button>
+    <button class="btn btn-light btn-sm" style="border-color:#93c5fd;" onclick="duplicateOrder()">Копия заказа</button>
+    <button class="btn btn-red btn-sm" onclick="deleteOrder()">Удалить заказ</button>
+  </div>
+
+  <div class="tab-pane active" id="pane-kinco">
+    <div class="marks-bar">
+      <span class="marks-bar-title">Марки заказа:</span>
+      <div id="marks-list" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+      <button class="btn btn-blue btn-sm" onclick="addMark()">+ Добавить марку</button>
+      <button class="btn btn-light btn-sm" style="border-color:#cbd5e1;" onclick="duplicateMark()">Дублировать</button>
+      <button class="btn btn-red btn-sm" onclick="deleteMark()">Удалить марку</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="card no-print">
+
+        <div class="card-header">НАСТРОЙКИ СТАНКА (ОБЩИЕ ДЛЯ ПРОГРАММЫ)</div>
+        <div class="form-row"><label>Шаг по умолчанию, мм</label><input type="number" id="cfg-step" class="inp-yellow" value="80" onchange="updateSettings()"></div>
+        <div class="form-row"><label>База между рядами штампов ΔX, мм</label><input type="number" id="cfg-dx" class="inp-yellow" value="160" onchange="updateSettings()"></div>
+        <div class="form-row"><label>Отсчет от ряда штампов (1 или 2)</label><select id="cfg-row" class="inp-yellow" onchange="updateSettings()"><option value="1">1 (первый ряд)</option><option value="2">2 (второй ряд)</option></select></div>
+        <div class="form-row"><label>Порог стартового удара (если ≥), мм</label><input type="number" id="cfg-start-thresh" class="inp-yellow" value="800" onchange="updateSettings()"></div>
+        <div class="form-row"><label>Первое расстояние до стартового удара, мм</label><input type="number" id="cfg-start-dist" class="inp-yellow" value="100" onchange="updateSettings()"></div>
+      </div>
+
+      <div class="card no-print">
+        <div class="card-header">АВТОМАТИЧЕСКАЯ ПРОВЕРКА ТЕКУЩЕЙ МАРКИ</div>
+        <div class="form-row"><label>Расчетная длина, мм:</label><div id="chk-calc-len" class="status-val st-neutral">0 мм</div></div>
+        <div class="form-row"><label>Статус длины:</label><div id="chk-len-status" class="status-val st-neutral">—</div></div>
+        <div class="form-row"><label>Проверка пар отверстий:</label><div id="chk-holes-status" class="status-val st-neutral">—</div></div>
+        <div class="form-row"><label>Габарит (≤ L):</label><div id="chk-bound-status" class="status-val st-neutral">—</div></div>
+        <div class="form-row"><label>Статус запуска / Kinco:</label><div id="chk-ready-status" class="status-val st-neutral">—</div></div>
+        <div class="form-row"><label>Итого на партию марки:</label><div id="chk-batch-info" class="status-val st-neutral">—</div></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card no-print">
+        <div class="card-header">
+          <span>БЛОК 1. ВВОД ДАННЫХ С ЧЕРТЕЖА (ДО 48 УЧАСТКОВ)</span>
+          <div class="no-print" style="display:flex; gap:6px;">
+            <button class="btn btn-blue btn-sm" onclick="addSegmentRow(true)">+ Строка участка</button>
+            <button class="btn btn-red btn-sm" onclick="clearSegments()">Очистить</button>
+          </div>
+        </div>
+        <div class="hint-bar no-print">⌨️ <b>Быстрый ввод по Enter:</b> Марка → Профиль → Длина L → Кол-во → Шаг (стр. 1) → Шагов (стр. 1) → Шаг (стр. 2)... При заполнении последней строки новая добавляется автоматически.</div>
+        <div class="form-row"><label>Обозначение марки:</label><input type="text" id="m-name" class="inp-yellow" onkeydown="handleHeaderEnter(event, 'm-profile')" oninput="updateMarkHeader()"></div>
+        <div class="form-row"><label>Тип профиля:</label><select id="m-profile" class="inp-yellow" onkeydown="handleHeaderEnter(event, 'm-len')" onchange="updateMarkHeader()"></select></div>
+        <div class="form-row"><label>Параметры профиля:</label><div id="m-profile-info" class="status-val st-neutral">Толщина: — | Развёртка: —</div></div>
+        <div class="form-row"><label>Общая длина детали (L), мм:</label><input type="number" id="m-len" class="inp-yellow" onkeydown="handleHeaderEnter(event, 'm-qty')" oninput="updateMarkHeader()"></div>
+        <div class="form-row"><label>Количество марок, шт.:</label><input type="number" id="m-qty" class="inp-yellow" onkeydown="handleHeaderEnter(event, 'seg-step-0')" oninput="updateMarkHeader()"></div>
+        <div class="table-wrap" style="margin-top:10px;">
+          <table>
+            <thead><tr><th style="width:40px;">№</th><th>Шаг, мм</th><th>Шагов</th><th>Размер, мм</th><th>Накоп. отв.</th><th class="no-print" style="width:68px;">Действ.</th></tr></thead>
+            <tbody id="segments-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">БЛОК 2. ГОТОВАЯ ПРОГРАММА ДЛЯ ПУЛЬТА KINCO (СТР. 0–48)</div>
+        <div id="kinco-mark-summary" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:8px 12px; margin-bottom:10px; font-size:13px; line-height:1.6;"></div>
+        <div class="table-wrap" style="max-height: none; overflow-y: visible;">
+          <table>
+            <thead><tr><th style="width:55px;">№ стр.</th><th>ММ.</th><th>Ш</th><th>Ряд 1</th><th>Ряд 2</th><th>Комментарий</th></tr></thead>
+            <tbody id="kinco-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="pane-general">
+    <div class="card">
+      <div class="card-header">
+        <span id="general-report-title">ОБЩИЙ ОТЧЕТ ПО ЗАКАЗУ</span>
+        <div class="no-print" style="display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+          <select id="rep-scope-gen" style="width:auto;" onchange="syncReportScope(this.value)">
+            <option value="current">Только текущий заказ</option>
+            <option value="all">Все заказы программы (сводный)</option>
+          </select>
+          <label style="font-size:13px; color:var(--text); font-weight:600; cursor:pointer;">
+            <input type="checkbox" id="rep-only-ready" onchange="renderReports()"> Только со статусом «ГОТОВО»
+          </label>
+        </div>
+      </div>
+      <div class="table-wrap" id="general-report-wrap">
+        <table><thead id="general-report-head"></thead><tbody id="general-report-body"></tbody></table>
+      </div>
+
+    </div>
+  </div>
+
+<div class="tab-pane" id="pane-summary">
+    <div class="card no-print" style="margin-bottom:14px;">
+      <div class="card-header">ПАРАМЕТРЫ РАСЧЕТА И ПОДПИСИ ЗАЯВКИ МЕТАЛЛА</div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div class="form-row" style="margin-bottom:0;">
+          <label>Плотность металла, кг/м³ (сталь = 7850):</label>
+          <input type="number" id="cfg-density" class="inp-yellow" value="7850" oninput="updateSettings()">
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label>Общий технологический запас длины, мм (на каждый вид штрипсы):</label>
+          <input type="number" id="cfg-scrap-mm" class="inp-yellow" value="0" oninput="updateSettings()">
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:0; border-top:1px solid #e2e8f0; padding-top:10px;">
+        <div class="form-row" style="margin-bottom:0;">
+          <label>Заявку составил (Должность / ФИО):</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="sig-role1" class="inp-yellow" placeholder="Должность (напр. Инженер)" oninput="updateSignatures()">
+            <input type="text" id="sig-name1" class="inp-yellow" placeholder="ФИО" oninput="updateSignatures()">
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label>Утвердил (Должность / ФИО):</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="sig-role2" class="inp-yellow" placeholder="Должность (напр. Нач. цеха)" oninput="updateSignatures()">
+            <input type="text" id="sig-name2" class="inp-yellow" placeholder="ФИО" oninput="updateSignatures()">
+          </div>
+        </div>
+      </div>
+    </div>
+      
+
+
+    <div class="card">
+      <div class="card-header">
+        <span id="summary-report-title">СВОДНЫЙ ОТЧЕТ — ЗАЯВКА МЕТАЛЛА НА ПРОИЗВОДСТВО</span>
+        <div class="no-print" style="display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+          <select id="rep-scope-sum" style="width:auto;" onchange="syncReportScope(this.value)"><option value="current">Только текущий заказ</option><option value="all">Все заказы программы (сводный)</option></select>
+        </div>
+      </div>
+	  
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>№</th><th>Ширина штрипсы, мм</th><th>Толщина, мм</th><th>Длина по маркам, м.п.</th><th>Запас, м.п.</th><th>Итого длина к заказу, м.п.</th><th>Чистый вес, кг</th><th>Итого вес с запасом, кг</th><th>Итого вес, т</th></tr></thead>
+          <tbody id="summary-report-body"></tbody>
+        </table>
+      </div>
+	  <div id="summary-signatures-box" style="margin-top:18px;"></div>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="pane-profiles">
+    <div class="card">
+      <div class="card-header"><span>СПРАВОЧНИК ТИПОВЫХ ПРОФИЛЕЙ</span><button class="btn btn-blue btn-sm" onclick="addProfile()">+ Добавить профиль</button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Тип профиля (имя в списке)</th><th>Наименование</th><th>Ширина, мм</th><th>Полка, мм</th><th>Толщина, мм</th><th>Развёртка (штрипса), мм</th><th>Описание</th><th style="width:45px;">Уд.</th></tr></thead>
+          <tbody id="profiles-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="print-all-container"></div>
+
+<script>
+document.getElementById('script-warning').style.display = 'none';
+
+
+
+var STORAGE_KEY = 'kinco_punch_app_v8';
+var LEGACY_KEY = 'kinco_punch_app_v7';
+
+var state = {
+  settings: {
+    defaultStep: 80,
+    dx: 160,
+    baseRow: 1,
+    startThresh: 800,
+    startDist: 100,
+    density: 7850,
+    scrapMm: 0,
+    sigRole1: 'Инженер-технолог',
+    sigName1: '',
+    sigRole2: 'Руководитель производства',
+    sigName2: ''
+	
+  },
+  profiles: [
+    { id: 'p1', name: 'ПС 300х80х3', type: 'ПС', width: 300, flange: 80, thickness: 3, stripWidth: 460, desc: 'Профиль стоечный 300x80, s=3.0' },
+    { id: 'p2', name: 'ПС 200х60х2', type: 'ПС', width: 200, flange: 60, thickness: 2, stripWidth: 320, desc: 'Профиль стоечный 200x60, s=2.0' }
+  ],
+  orders: [
+    {
+      id: 'ord1',
+      name: 'Заказ №1',
+	  createdAt: new Date().toISOString().slice(0, 10),
+      activeMarkId: 'm1',
+      marks: [
+        {
+          id: 'm1',
+          name: 'Б1-5',
+          profileId: 'p1',
+          length: 3000,
+          qty: 1,
+          segments: [
+            { step: 40, count: 1 },
+            { step: 80, count: 7 },
+            { step: 1500, count: 1 },
+            { step: 760, count: 1 },
+            { step: 140, count: 1 },
+            { step: '', count: '' }
+          ]
+        }
+      ]
+    }
+  ],
+  activeOrderId: 'ord1',
+  reportScope: 'current'
+
+
+};
+
+function saveToStorage() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function loadFromStorage() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.orders && parsed.orders.length > 0 && parsed.profiles) {
+        state = parsed;
+        if (!state.reportScope) state.reportScope = 'current';
+        return;
+      }
+    }
+    var oldRaw = localStorage.getItem(LEGACY_KEY);
+    if (oldRaw) {
+      var oldParsed = JSON.parse(oldRaw);
+      if (oldParsed && oldParsed.marks && oldParsed.marks.length > 0) {
+        state.settings = oldParsed.settings || state.settings;
+        state.profiles = oldParsed.profiles || state.profiles;
+        state.orders = [{
+          id: 'ord1',
+          name: 'Заказ №1',
+          activeMarkId: oldParsed.activeMarkId || oldParsed.marks.at(0).id,
+          marks: oldParsed.marks
+        }];
+        state.activeOrderId = 'ord1';
+        saveToStorage();
+      }
+    }
+  } catch (e) {}
+}
+
+function getActiveOrder() {
+  for (var i = 0; i < state.orders.length; i++) {
+    if (state.orders[i].id === state.activeOrderId) return state.orders[i];
+  }
+  state.activeOrderId = state.orders.at(0).id;
+  return state.orders.at(0);
+}
+
+function getActiveMark() {
+  var ord = getActiveOrder();
+  for (var i = 0; i < ord.marks.length; i++) {
+    if (ord.marks[i].id === ord.activeMarkId) return ord.marks[i];
+  }
+  ord.activeMarkId = ord.marks.at(0).id;
+  return ord.marks.at(0);
+}
+
+function getProfileById(pid) {
+  for (var i = 0; i < state.profiles.length; i++) {
+    if (state.profiles[i].id === pid) return state.profiles[i];
+  }
+  return null;
+}
+
+function switchTab(tabName) {
+  var panes = ['kinco', 'general', 'summary', 'profiles'];
+  for (var i = 0; i < panes.length; i++) {
+    var p = panes[i];
+    document.getElementById('pane-' + p).className = (p === tabName) ? 'tab-pane active' : 'tab-pane';
+    document.getElementById('tab-btn-' + p).className = (p === tabName) ? 'tab-btn active' : 'tab-btn';
+  }
+  if (tabName === 'general' || tabName === 'summary') renderReports();
+}
+
+
+function formatOrderDate(isoDate) {
+  if (!isoDate) return '—';
+  var parts = isoDate.split('-');
+  if (parts.length !== 3) return isoDate;
+  return parts.at(2) + '.' + parts.at(1) + '.' + parts.at(0);
+}
+
+
+function renderOrdersBar() {
+  var sel = document.getElementById('order-select');
+  var ord = getActiveOrder();
+  if (!ord.createdAt) {
+    ord.createdAt = new Date().toISOString().slice(0, 10);
+  }
+  var html = '';
+  for (var i = 0; i < state.orders.length; i++) {
+    var o = state.orders[i];
+    var selected = (o.id === ord.id) ? ' selected' : '';
+    var dStr = o.createdAt ? (' от ' + formatOrderDate(o.createdAt)) : '';
+    html += '\x3Coption value="' + o.id + '"' + selected + '>' + (o.name || 'Без названия') + dStr + ' (' + o.marks.length + ' мар.)\x3C/option>';
+  }
+  sel.innerHTML = html;
+  document.getElementById('order-name-inp').value = ord.name || '';
+  var dateInp = document.getElementById('order-date-inp');
+  if (dateInp) dateInp.value = ord.createdAt || '';
+}
+
+function selectOrder(oid) {
+  state.activeOrderId = oid;
+  saveToStorage();
+  renderAll();
+}
+
+function updateOrderName(val) {
+  var ord = getActiveOrder();
+  ord.name = val;
+  saveToStorage();
+  var sel = document.getElementById('order-select');
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === ord.id) {
+      sel.options[i].textContent = (ord.name || 'Без названия') + ' (' + ord.marks.length + ' мар.)';
+      break;
+    }
+  }
+  renderKincoResults();
+  renderReports();
+}
+
+function addOrder() {
+  var newOid = 'ord' + Date.now();
+  var newMid = 'm' + (Date.now() + 1);
+  var defProf = state.profiles.length > 0 ? state.profiles.at(0).id : '';
+  state.orders.push({
+    id: newOid,
+    name: 'Заказ №' + (state.orders.length + 1),
+    activeMarkId: newMid,
+    marks: [{ id: newMid, name: 'М-1', profileId: defProf, length: '', qty: 1, segments: [{ step: '', count: '' }] }]
+  });
+  state.activeOrderId = newOid;
+  saveToStorage();
+  renderAll();
+  var inp = document.getElementById('order-name-inp');
+  if (inp) { inp.focus(); inp.select(); }
+}
+
+function updateOrderDate(val) {
+  var ord = getActiveOrder();
+  ord.createdAt = val;
+  saveToStorage();
+  renderOrdersBar();
+  renderKincoResults();
+  renderReports();
+}
+
+function duplicateOrder() {
+  var cur = getActiveOrder();
+  var copy = JSON.parse(JSON.stringify(cur));
+  copy.id = 'ord' + Date.now();
+  copy.name = (cur.name || 'Заказ') + ' (копия)';
+  for (var i = 0; i < copy.marks.length; i++) copy.marks[i].id = 'm' + (Date.now() + i + 1);
+  copy.activeMarkId = copy.marks.at(0).id;
+  state.orders.push(copy);
+  state.activeOrderId = copy.id;
+  saveToStorage();
+  renderAll();
+}
+
+function deleteOrder() {
+  if (state.orders.length <= 1) { alert('Нельзя удалить единственный заказ в программе.'); return; }
+  var cur = getActiveOrder();
+  if (!confirm('Удалить заказ «' + (cur.name || 'Без названия') + '» со всеми его марками?')) return;
+  state.orders = state.orders.filter(function(item) { return item.id !== cur.id; });
+  state.activeOrderId = state.orders.at(0).id;
+  saveToStorage();
+  renderAll();
+}
+
+function calculateMark(mark) {
+  var cfg = state.settings;
+  var dx = Number(cfg.dx) || 160;
+  var baseRow = Number(cfg.baseRow) || 1;
+  var startThresh = Number(cfg.startThresh) || 800;
+  var startDist = Number(cfg.startDist) || 100;
+  var targetL = Number(mark.length) || 0;
+  var qty = Number(mark.qty) || 0;
+
+  var validSegs = [];
+  var calcLen = 0;
+  for (var i = 0; i < mark.segments.length; i++) {
+    var s = mark.segments[i];
+    var st = s.step === '' || s.step === null ? NaN : Number(s.step);
+    var cnt = s.count === '' || s.count === null ? NaN : Number(s.count);
+    if (!isNaN(st) && !isNaN(cnt) && (st > 0 || cnt > 0)) {
+      var segLen = st * cnt;
+      calcLen += segLen;
+      validSegs.push({ rowIdx: i + 1, step: st, count: cnt, size: segLen });
+    }
+  }
+
+  var points = [];
+  var cumPos = 0;
+  for (var j = 0; j < validSegs.length; j++) {
+    var isLast = (j === validSegs.length - 1);
+    var seg = validSegs[j];
+    for (var k = 1; k <= seg.count; k++) {
+      cumPos += seg.step;
+      if (!(isLast && k === seg.count)) {
+        points.push({ x: Math.round(cumPos * 1000) / 1000, segNum: seg.rowIdx });
+      }
+    }
+  }
+
+  var totalHoles = points.length;
+  var commands = [];
+  var hasStartPunch = false;
+
+  if (points.length > 0 && points.at(0).x >= startThresh) {
+    hasStartPunch = true;
+    commands.push({ mm: startDist, code: '11', r1: 1, r2: 1, comment: 'Стартовый удар' });
+  }
+
+  var used = [];
+  for (var u = 0; u < points.length; u++) used.push(false);
+
+  for (var p = 0; p < points.length; p++) {
+    if (used[p]) continue;
+    var curX = points[p].x;
+    var pairIdx = -1;
+    for (var q = p + 1; q < points.length; q++) {
+      if (!used[q] && Math.abs((points[q].x - curX) - dx) < 0.01) { pairIdx = q; break; }
+    }
+    if (pairIdx !== -1) {
+      used[p] = true;
+      used[pairIdx] = true;
+      var cmdMm = (baseRow === 2) ? (curX + dx) : curX;
+      commands.push({ mm: cmdMm, code: '11', r1: 1, r2: 1, comment: 'Парный удар (уч. ' + points[p].segNum + ')' });
+    } else {
+      used[p] = true;
+      commands.push({
+        mm: curX,
+        code: (baseRow === 2) ? '10' : '01',
+        r1: (baseRow === 2) ? 0 : 1,
+        r2: (baseRow === 2) ? 1 : 0,
+        comment: 'Один. отв. (уч. ' + points[p].segNum + ')'
+      });
+    }
+  }
+
+  var rows49 = [];
+  var sumR1 = 0;
+  var sumR2 = 0;
+  var maxCoord = 0;
+  for (var r = 0; r < 49; r++) {
+    if (r < commands.length) {
+      var c = commands[r];
+      rows49.push(c);
+      sumR1 += c.r1;
+      sumR2 += c.r2;
+      if (c.mm > maxCoord) maxCoord = c.mm;
+    } else {
+      rows49.push({ mm: 0, code: '00', r1: 0, r2: 0, comment: '' });
+    }
+  }
+
+  var lenDiff = Math.round((calcLen - targetL) * 100) / 100;
+  var lenOk = (targetL > 0 && Math.abs(lenDiff) < 0.01);
+  var punchedPairs = (sumR1 + sumR2) - (hasStartPunch ? 2 : 0);
+  var holesOk = (totalHoles > 0 && punchedPairs === totalHoles && commands.length <= 49);
+  var boundOk = (targetL > 0 && maxCoord <= targetL);
+  var isReady = lenOk && holesOk && boundOk;
+
+  return {
+    calcLen: calcLen, lenDiff: lenDiff, lenOk: lenOk, totalHoles: totalHoles,
+    holesOk: holesOk, boundOk: boundOk, isReady: isReady,
+    activeRowsCount: Math.min(commands.length, 49), hasStartPunch: hasStartPunch,
+    rows49: rows49, totalMeters: (targetL * qty) / 1000
+  };
+}
+
+/*-----*/
+
+function updateSettings() {
+  state.settings.defaultStep = Number(document.getElementById('cfg-step').value) || 0;
+  state.settings.dx = Number(document.getElementById('cfg-dx').value) || 160;
+  state.settings.baseRow = Number(document.getElementById('cfg-row').value) || 1;
+  state.settings.startThresh = Number(document.getElementById('cfg-start-thresh').value) || 800;
+  state.settings.startDist = Number(document.getElementById('cfg-start-dist').value) || 100;
+  state.settings.density = Number(document.getElementById('cfg-density').value) || 7850;
+  state.settings.scrapMm = Number(document.getElementById('cfg-scrap-mm').value) || 0;
+  saveToStorage();
+  renderAll();
+}
+
+function updateMarkHeader() {
+  var m = getActiveMark();
+  m.name = document.getElementById('m-name').value;
+  m.profileId = document.getElementById('m-profile').value;
+  m.length = document.getElementById('m-len').value;
+  m.qty = document.getElementById('m-qty').value;
+  saveToStorage();
+  renderMarksBar();
+  renderKincoResults();
+}
+
+function renderMarksBar() {
+  var ord = getActiveOrder();
+  var html = '';
+  for (var i = 0; i < ord.marks.length; i++) {
+    var mk = ord.marks[i];
+    var res = calculateMark(mk);
+    html += '\x3Cbutton class="mark-pill' + (mk.id === ord.activeMarkId ? ' active' : '') + (!res.isReady ? ' err' : '') + '" onclick="selectMark(\'' + mk.id + '\')">' + (mk.name || 'Без имени') + ' (' + (Number(mk.qty) || 0) + ' шт.)\x3C/button>';
+  }
+  document.getElementById('marks-list').innerHTML = html;
+}
+
+
+function handleHeaderEnter(e, nextId) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    var el = document.getElementById(nextId);
+    if (el) { el.focus(); if (el.select) el.select(); }
+  }
+}
+
+function handleSegmentInput(idx, field, val) {
+  var m = getActiveMark();
+  m.segments[idx][field] = val;
+  var lastIdx = m.segments.length - 1;
+  var lastSeg = m.segments[lastIdx];
+  if (idx === lastIdx && lastSeg.step !== '' && lastSeg.count !== '' && m.segments.length < 48) {
+    m.segments.push({ step: '', count: '' });
+    saveToStorage();
+    renderSegmentsTable(false);
+    var curEl = document.getElementById('seg-' + field + '-' + idx);
+    if (curEl) curEl.focus();
+    renderKincoResults();
+    return;
+  }
+  saveToStorage();
+  updateSegmentComputedCells();
+  renderKincoResults();
+}
+
+function handleSegmentEnter(e, idx, field) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    var m = getActiveMark();
+    if (field === 'step') {
+      var cntEl = document.getElementById('seg-count-' + idx);
+      if (cntEl) { cntEl.focus(); cntEl.select(); }
+    } else if (field === 'count') {
+      var nextIdx = idx + 1;
+      if (nextIdx >= m.segments.length && m.segments.length < 48) {
+        m.segments.push({ step: '', count: '' });
+        saveToStorage();
+        renderSegmentsTable(false);
+      }
+      var nextStepEl = document.getElementById('seg-step-' + nextIdx);
+      if (nextStepEl) { nextStepEl.focus(); nextStepEl.select(); }
+    }
+  }
+}
+
+function addSegmentRow(focusNew) {
+  var m = getActiveMark();
+  if (m.segments.length >= 48) { alert('Достигнут максимум (48 участков).'); return; }
+  m.segments.push({ step: '', count: '' });
+  saveToStorage();
+  renderSegmentsTable(false);
+  if (focusNew) {
+    var el = document.getElementById('seg-step-' + (m.segments.length - 1));
+    if (el) el.focus();
+  }
+}
+
+function insertSegmentRow(idx) {
+  var m = getActiveMark();
+  if (m.segments.length >= 48) { alert('Достигнут максимум (48 участков).'); return; }
+  m.segments.splice(idx, 0, { step: '', count: '' });
+  saveToStorage();
+  renderSegmentsTable(false);
+  renderKincoResults();
+  var el = document.getElementById('seg-step-' + idx);
+  if (el) el.focus();
+}
+
+function removeSegmentRow(idx) {
+  var m = getActiveMark();
+  if (m.segments.length <= 1) {
+    m.segments.splice(0, 1, { step: '', count: '' });
+  } else {
+    m.segments.splice(idx, 1);
+  }
+  saveToStorage();
+  renderSegmentsTable(false);
+  renderKincoResults();
+}
+
+function clearSegments() {
+  var m = getActiveMark();
+  if (!confirm('Очистить все участки («Шаг, мм» и «Шагов») для текущей марки?')) return;
+  m.segments = [{ step: '', count: '' }];
+  saveToStorage();
+  renderSegmentsTable(false);
+  renderKincoResults();
+  var el = document.getElementById('seg-step-0');
+  if (el) el.focus();
+}
+
+function updateSegmentComputedCells() {
+  var m = getActiveMark();
+  var validFlags = [];
+  for (var i = 0; i < m.segments.length; i++) {
+    var st = Number(m.segments[i].step);
+    var cnt = Number(m.segments[i].count);
+    validFlags.push(m.segments[i].step !== '' && m.segments[i].count !== '' && (st > 0 || cnt > 0));
+  }
+  var lastValidIdx = -1;
+  for (var j = validFlags.length - 1; j >= 0; j--) {
+    if (validFlags[j]) { lastValidIdx = j; break; }
+  }
+  var cumHoles = 0;
+  for (var k = 0; k < m.segments.length; k++) {
+    var sizeCell = document.getElementById('seg-size-' + k);
+    var holesCell = document.getElementById('seg-holes-' + k);
+    if (!sizeCell || !holesCell) continue;
+    if (validFlags[k]) {
+      var stVal = Number(m.segments[k].step) || 0;
+      var cntVal = Number(m.segments[k].count) || 0;
+      sizeCell.textContent = Math.round(stVal * cntVal * 100) / 100;
+      if (k !== lastValidIdx) cumHoles += cntVal;
+      holesCell.textContent = cumHoles;
+    } else {
+      sizeCell.textContent = '';
+      holesCell.textContent = '';
+    }
+  }
+}
+
+function renderSegmentsTable(preserveFocus) {
+  var activeId = preserveFocus && document.activeElement ? document.activeElement.id : null;
+  var m = getActiveMark();
+  var tbody = document.getElementById('segments-body');
+  var html = '';
+  for (var i = 0; i < m.segments.length; i++) {
+    var s = m.segments[i];
+    html += '\x3Ctr>' +
+      '\x3Ctd>' + (i + 1) + '\x3C/td>' +
+      '\x3Ctd>\x3Cinput type="number" id="seg-step-' + i + '" class="inp-yellow" value="' + (s.step === '' ? '' : s.step) + '" oninput="handleSegmentInput(' + i + ', \'step\', this.value)" onkeydown="handleSegmentEnter(event, ' + i + ', \'step\')">\x3C/td>' +
+      '\x3Ctd>\x3Cinput type="number" id="seg-count-' + i + '" class="inp-yellow" value="' + (s.count === '' ? '' : s.count) + '" oninput="handleSegmentInput(' + i + ', \'count\', this.value)" onkeydown="handleSegmentEnter(event, ' + i + ', \'count\')">\x3C/td>' +
+      '\x3Ctd id="seg-size-' + i + '" style="font-weight:600;">\x3C/td>' +
+      '\x3Ctd id="seg-holes-' + i + '" style="font-weight:600;">\x3C/td>' +
+      '\x3Ctd class="no-print" style="white-space:nowrap;">' +
+        '\x3Cbutton class="btn btn-blue btn-sm" title="Вставить строку выше" onclick="insertSegmentRow(' + i + ')">+\x3C/button> ' +
+        '\x3Cbutton class="btn btn-red btn-sm" title="Удалить строку" onclick="removeSegmentRow(' + i + ')">×\x3C/button>' +
+      '\x3C/td>' +
+      '\x3C/tr>';
+  }
+  tbody.innerHTML = html;
+  updateSegmentComputedCells();
+  if (activeId) { var el = document.getElementById(activeId); if (el) el.focus(); }
+}
+
+function renderKincoResults() {
+  var ord = getActiveOrder();
+  var m = getActiveMark();
+  var prof = getProfileById(m.profileId);
+  var res = calculateMark(m);
+
+  var summaryEl = document.getElementById('kinco-mark-summary');
+  if (summaryEl) {
+    var profText = prof ? (prof.name + ' (Толщина: ' + prof.thickness + ' мм | Развёртка: ' + prof.stripWidth + ' мм)') : 'Не выбран';
+    summaryEl.innerHTML =
+            '\x3Cdiv>\x3Cb>Заказ:\x3C/b> ' + (ord.name || '—') + ' &nbsp;|&nbsp; \x3Cb>Дата заказа:\x3C/b> ' + formatOrderDate(ord.createdAt) + '\x3C/div>' +
+
+      '\x3Cdiv>\x3Cb>Марка:\x3C/b> ' + (m.name || '—') + ' &nbsp;|&nbsp; \x3Cb>Длина (L):\x3C/b> ' + (m.length || 0) + ' мм &nbsp;|&nbsp; \x3Cb>Кол-во:\x3C/b> ' + (m.qty || 0) + ' шт.\x3C/div>' +
+      '\x3Cdiv>\x3Cb>Профиль:\x3C/b> ' + profText + '\x3C/div>';
+  }
+
+  document.getElementById('m-profile-info').textContent = prof ? ('Толщина: ' + prof.thickness + ' мм | Развёртка: ' + prof.stripWidth + ' мм') : 'Профиль не выбран';
+  document.getElementById('chk-calc-len').textContent = res.calcLen + ' мм';
+
+  var lenStEl = document.getElementById('chk-len-status');
+  if (res.lenOk) { lenStEl.textContent = 'ОК'; lenStEl.className = 'status-val st-ok'; }
+  else { var sign = res.lenDiff > 0 ? '+' : ''; lenStEl.textContent = 'ОШИБКА: ' + sign + res.lenDiff + ' мм'; lenStEl.className = 'status-val st-err'; }
+
+  var holesStEl = document.getElementById('chk-holes-status');
+  if (res.holesOk) { holesStEl.textContent = 'ОК (' + res.totalHoles + ' пар)'; holesStEl.className = 'status-val st-ok'; }
+  else { holesStEl.textContent = 'ПРОВЕРИТЬ'; holesStEl.className = 'status-val st-err'; }
+
+  var boundStEl = document.getElementById('chk-bound-status');
+  if (res.boundOk) { boundStEl.textContent = 'ОК (в пределах)'; boundStEl.className = 'status-val st-ok'; }
+  else { boundStEl.textContent = 'ВЫХОД ЗА ГАБАРИТ'; boundStEl.className = 'status-val st-err'; }
+
+  var readyStEl = document.getElementById('chk-ready-status');
+  if (res.isReady) {
+    readyStEl.textContent = 'ГОТОВО (' + res.activeRowsCount + ' из 49 стр.) | Запуск: ДА (холостой удар: ' + (res.hasStartPunch ? 'ДА' : 'НЕТ') + ')';
+    readyStEl.className = 'status-val st-ok';
+  } else {
+    readyStEl.textContent = 'ОШИБКА В ДАННЫХ — СТАРТ НЕВОЗМОЖЕН!';
+    readyStEl.className = 'status-val st-err';
+  }
+
+  document.getElementById('chk-batch-info').textContent = (Number(m.qty) || 0) + ' шт. | ' + res.totalHoles + ' пар | ' + res.totalMeters.toFixed(2) + ' м.п. | ' + (prof ? prof.name : '—');
+
+  var kHtml = '';
+  for (var r = 0; r < res.rows49.length; r++) {
+    var row = res.rows49[r];
+    var isAct = row.code !== '00';
+    kHtml += '\x3Ctr class="' + (isAct ? 'row-active' : 'row-inactive') + '">' +
+      '\x3Ctd>\x3Cb>' + r + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb>' + row.mm + '\x3C/b>\x3C/td>' +
+      '\x3Ctd>\x3Cb style="' + (isAct ? 'color:#1e40af;' : '') + '">' + row.code + '\x3C/b>\x3C/td>' +
+      '\x3Ctd>' + row.r1 + '\x3C/td>\x3Ctd>' + row.r2 + '\x3C/td>\x3Ctd style="text-align:left;">' + row.comment + '\x3C/td>\x3C/tr>';
+  }
+  document.getElementById('kinco-body').innerHTML = kHtml;
+}
+function printAllMarks() {
+  var ord = getActiveOrder(), readyList = [];
+  for (var i = 0; i < ord.marks.length; i++) {
+    var res = calculateMark(ord.marks[i]);
+    if (res.isReady) readyList.push({ mark: ord.marks[i], res: res });
+  }
+  if (readyList.length === 0) { alert('В текущем заказе нет ни одной марки со статусом «ГОТОВО». Исправьте ошибки перед печатью.'); return; }
+
+  var container = document.getElementById('print-all-container'), html = '';
+  for (var j = 0; j < readyList.length; j++) {
+    var m = readyList[j].mark, res = readyList[j].res, prof = getProfileById(m.profileId);
+    var profText = prof ? (prof.name + ' (Толщина: ' + prof.thickness + ' мм | Развёртка: ' + prof.stripWidth + ' мм)') : 'Не выбран';
+    var rowsHtml = '';
+    for (var r = 0; r < res.rows49.length; r++) {
+      var row = res.rows49[r];
+      if (row.code === '00') continue;
+      rowsHtml += '\x3Ctr class="row-active">\x3Ctd>\x3Cb>' + r + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb>' + row.mm + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb style="color:#1e40af;">' + row.code + '\x3C/b>\x3C/td>\x3Ctd>' + row.r1 + '\x3C/td>\x3Ctd>' + row.r2 + '\x3C/td>\x3Ctd style="text-align:left;">' + row.comment + '\x3C/td>\x3C/tr>';
+    }
+    html += '\x3Cdiv class="card print-page-break">' +
+      '\x3Cdiv class="card-header">ПРОГРАММА ДЛЯ ПУЛЬТА KINCO — МАРКА ' + (j + 1) + ' ИЗ ' + readyList.length + '\x3C/div>' +
+      '\x3Cdiv class="kinco-summary-box" style="border:1px solid #000; border-radius:6px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.6;">' +
+       '\x3Cdiv>\x3Cb>Заказ:\x3C/b> ' + (ord.name || '—') + ' &nbsp;|&nbsp; \x3Cb>Дата заказа:\x3C/b> ' + formatOrderDate(ord.createdAt) + '\x3C/div>' +
+        '\x3Cdiv>\x3Cb>Марка:\x3C/b> ' + (m.name || '—') + ' &nbsp;|&nbsp; \x3Cb>Длина (L):\x3C/b> ' + (m.length || 0) + ' мм &nbsp;|&nbsp; \x3Cb>Кол-во:\x3C/b> ' + (m.qty || 0) + ' шт.\x3C/div>' +
+        '\x3Cdiv>\x3Cb>Профиль:\x3C/b> ' + profText + '\x3C/div>' +
+      '\x3C/div>' +
+      '\x3Cdiv class="table-wrap">\x3Ctable>\x3Cthead>\x3Ctr>\x3Cth style="width:55px;">№ стр.\x3C/th>\x3Cth>ММ.\x3C/th>\x3Cth>Ш\x3C/th>\x3Cth>Ряд 1\x3C/th>\x3Cth>Ряд 2\x3C/th>\x3Cth>Комментарий\x3C/th>\x3C/tr>\x3C/thead>\x3Ctbody>' + rowsHtml + '\x3C/tbody>\x3C/table>\x3C/div>\x3C/div>';
+  }
+  container.innerHTML = html;
+  document.body.classList.add('printing-all');
+  setTimeout(function() { window.print(); document.body.classList.remove('printing-all'); container.innerHTML = ''; }, 50);
+}
+
+function selectMark(mid) { getActiveOrder().activeMarkId = mid; saveToStorage(); renderAll(); }
+
+function addMark() {
+var ord = getActiveOrder();
+var newId = 'm' + Date.now();
+var defProf = state.profiles.length > 0 ? state.profiles.at(0).id : '';
+ord.marks.push({ id: newId, name: 'М-' + (ord.marks.length + 1), profileId: defProf, length: '', qty: 1, segments: [{ step: '', count: '' }] });
+ord.activeMarkId = newId;
+saveToStorage();
+renderAll();
+var nameEl = document.getElementById('m-name');
+if (nameEl) { nameEl.focus(); nameEl.select(); }
+}
+function duplicateMark() {
+var ord = getActiveOrder();
+var cur = getActiveMark();
+var copy = JSON.parse(JSON.stringify(cur));
+copy.id = 'm' + Date.now();
+copy.name = cur.name + ' (копия)';
+ord.marks.push(copy);
+ord.activeMarkId = copy.id;
+saveToStorage();
+renderAll();
+}
+function deleteMark() {
+var ord = getActiveOrder();
+if (ord.marks.length <= 1) { alert('Нельзя удалить единственную марку в заказе.'); return; }
+var cur = getActiveMark();
+if (!confirm('Удалить марку «' + cur.name + '»?')) return;
+ord.marks = ord.marks.filter(function(item) { return item.id !== cur.id; });
+ord.activeMarkId = ord.marks.at(0).id;
+saveToStorage();
+renderAll();
+}
+function syncReportScope(val) {
+state.reportScope = val;
+document.getElementById('rep-scope-gen').value = val;
+document.getElementById('rep-scope-sum').value = val;
+saveToStorage();
+renderReports();
+}
+function renderReports() {
+  var isAllOrders = (state.reportScope === 'all');
+  var onlyReady = document.getElementById('rep-only-ready').checked;
+  var density = Number(state.settings.density) || 7850;
+  var scrapM = (Number(state.settings.scrapMm) || 0) / 1000;
+  var activeOrd = getActiveOrder();
+
+  var scopeLabel = isAllOrders
+    ? 'ВСЕ ЗАКАЗЫ ПРОГРАММЫ (' + state.orders.length + ' шт.)'
+    : 'ЗАКАЗ: ' + (activeOrd.name || 'Без названия') + ' от ' + formatOrderDate(activeOrd.createdAt);
+
+  document.getElementById('general-report-title').textContent = 'ОБЩИЙ ОТЧЕТ — ' + scopeLabel;
+  document.getElementById('summary-report-title').textContent = 'СВОДНАЯ ЗАЯВКА МЕТАЛЛА — ' + scopeLabel;
+
+
+
+  var targetOrders = isAllOrders ? state.orders : [activeOrd];
+  var items = [];
+  for (var oIdx = 0; oIdx < targetOrders.length; oIdx++) {
+    var ord = targetOrders[oIdx];
+    for (var i = 0; i < ord.marks.length; i++) {
+      var mk = ord.marks[i];
+      var res = calculateMark(mk);
+      if (onlyReady && !res.isReady) continue;
+      var prof = getProfileById(mk.profileId);
+      var thk = prof ? (Number(prof.thickness) || 0) : 0;
+      var sw = prof ? (Number(prof.stripWidth) || 0) : 0;
+      var lenMm = Number(mk.length) || 0;
+      var qty = Number(mk.qty) || 0;
+      var meters = (lenMm * qty) / 1000;
+      items.push({
+        orderName: ord.name || 'Без названия', thickness: thk, profileName: prof ? prof.name : '—',
+        stripWidth: sw, markName: mk.name || '—', lengthMm: lenMm, qty: qty,
+        meters: meters, weightKg: (sw / 1000) * (thk / 1000) * meters * density, isReady: res.isReady
+      });
+    }
+  }
+
+  items.sort(function(a, b) {
+    if (a.thickness !== b.thickness) return a.thickness - b.thickness;
+    if (a.profileName !== b.profileName) return a.profileName.localeCompare(b.profileName, 'ru');
+    return a.orderName.localeCompare(b.orderName, 'ru');
+  });
+
+  document.getElementById('general-report-head').innerHTML =
+    '\x3Ctr>\x3Cth>№\x3C/th>' + (isAllOrders ? '\x3Cth>Заказ\x3C/th>' : '') +
+    '\x3Cth>Толщина, мм\x3C/th>\x3Cth>Тип профиля\x3C/th>\x3Cth>Ширина штрипсы, мм\x3C/th>\x3Cth>Марка\x3C/th>' +
+    '\x3Cth>Длина 1 шт., мм\x3C/th>\x3Cth>Кол-во, шт.\x3C/th>\x3Cth>Общая длина, м.п.\x3C/th>\x3Cth>Чистый вес, кг\x3C/th>\x3Cth>Статус\x3C/th>\x3C/tr>';
+
+  var genHtml = '', totQty = 0, totMeters = 0, totWeight = 0;
+  for (var g = 0; g < items.length; g++) {
+    var it = items[g];
+    totQty += it.qty; totMeters += it.meters; totWeight += it.weightKg;
+    genHtml += '\x3Ctr>\x3Ctd>' + (g + 1) + '\x3C/td>' +
+      (isAllOrders ? '\x3Ctd style="text-align:left; font-weight:600;">' + it.orderName + '\x3C/td>' : '') +
+      '\x3Ctd>\x3Cb>' + it.thickness + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb>' + it.profileName + '\x3C/b>\x3C/td>\x3Ctd>' + it.stripWidth + '\x3C/td>\x3Ctd>' + it.markName + '\x3C/td>' +
+      '\x3Ctd>' + it.lengthMm + '\x3C/td>\x3Ctd>' + it.qty + '\x3C/td>\x3Ctd>' + it.meters.toFixed(2) + '\x3C/td>\x3Ctd>' + it.weightKg.toFixed(2) + '\x3C/td>' +
+      '\x3Ctd class="' + (it.isReady ? 'st-ok' : 'st-err') + '">' + (it.isReady ? 'ГОТОВО' : 'ОШИБКА') + '\x3C/td>\x3C/tr>';
+  }
+  genHtml += '\x3Ctr class="tfoot-row">\x3Ctd colspan="' + (isAllOrders ? 7 : 6) + '" style="text-align:right;">ИТОГО ПО ОБЩЕМУ ОТЧЕТУ:\x3C/td>' +
+    '\x3Ctd>' + totQty + '\x3C/td>\x3Ctd>' + totMeters.toFixed(2) + '\x3C/td>\x3Ctd>' + totWeight.toFixed(2) + '\x3C/td>\x3Ctd>\x3C/td>\x3C/tr>';
+  document.getElementById('general-report-body').innerHTML = genHtml;
+
+  var groupsMap = {};
+  for (var s = 0; s < items.length; s++) {
+    var x = items[s];
+    if (x.stripWidth <= 0 || x.thickness <= 0) continue;
+    var key = x.stripWidth + '_' + x.thickness;
+    if (!groupsMap[key]) groupsMap[key] = { stripWidth: x.stripWidth, thickness: x.thickness, cleanMeters: 0 };
+    groupsMap[key].cleanMeters += x.meters;
+  }
+  var groups = [];
+  for (var k in groupsMap) if (groupsMap.hasOwnProperty(k)) groups.push(groupsMap[k]);
+  groups.sort(function(a, b) { return a.thickness !== b.thickness ? a.thickness - b.thickness : a.stripWidth - b.stripWidth; });
+
+  var sumHtml = '', sCleanM = 0, sScrapM = 0, sTotM = 0, sCleanKg = 0, sTotKg = 0;
+  for (var mIdx = 0; mIdx < groups.length; mIdx++) {
+    var gr = groups[mIdx];
+    var totalM = gr.cleanMeters + scrapM;
+    var cleanKg = (gr.stripWidth / 1000) * (gr.thickness / 1000) * gr.cleanMeters * density;
+    var totalKg = (gr.stripWidth / 1000) * (gr.thickness / 1000) * totalM * density;
+    sCleanM += gr.cleanMeters; sScrapM += scrapM; sTotM += totalM; sCleanKg += cleanKg; sTotKg += totalKg;
+    sumHtml += '\x3Ctr>\x3Ctd>' + (mIdx + 1) + '\x3C/td>\x3Ctd>\x3Cb>' + gr.stripWidth + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb>' + gr.thickness + '\x3C/b>\x3C/td>' +
+      '\x3Ctd>' + gr.cleanMeters.toFixed(2) + '\x3C/td>\x3Ctd>' + scrapM.toFixed(2) + '\x3C/td>\x3Ctd>\x3Cb>' + totalM.toFixed(2) + '\x3C/b>\x3C/td>' +
+      '\x3Ctd>' + cleanKg.toFixed(2) + '\x3C/td>\x3Ctd>\x3Cb>' + totalKg.toFixed(2) + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb>' + (totalKg / 1000).toFixed(3) + '\x3C/b>\x3C/td>\x3C/tr>';
+  }
+  sumHtml += '\x3Ctr class="tfoot-row">\x3Ctd colspan="3" style="text-align:right;">ИТОГО К ЗАКАЗУ МЕТАЛЛА:\x3C/td>' +
+    '\x3Ctd>' + sCleanM.toFixed(2) + '\x3C/td>\x3Ctd>' + sScrapM.toFixed(2) + '\x3C/td>\x3Ctd>' + sTotM.toFixed(2) + '\x3C/td>' +
+    '\x3Ctd>' + sCleanKg.toFixed(2) + '\x3C/td>\x3Ctd>' + sTotKg.toFixed(2) + '\x3C/td>\x3Ctd>' + (sTotKg / 1000).toFixed(3) + ' т\x3C/td>\x3C/tr>';
+  document.getElementById('summary-report-body').innerHTML = sumHtml;
+}
+
+function renderProfiles() {
+  document.getElementById('profiles-count').textContent = state.profiles.length;
+  var html = '';
+  for (var i = 0; i < state.profiles.length; i++) {
+    var p = state.profiles[i];
+    html += '\x3Ctr>' +
+      '\x3Ctd>\x3Cinput type="text" class="inp-yellow" value="' + p.name + '" oninput="editProfile(' + i + ', \'name\', this.value)">\x3C/td>' +
+      '\x3Ctd>\x3Cinput type="text" value="' + p.type + '" oninput="editProfile(' + i + ', \'type\', this.value)">\x3C/td>' +
+      '\x3Ctd>\x3Cinput type="number" value="' + p.width + '" oninput="editProfile(' + i + ', \'width\', this.value)">\x3C/td>' +
+      '\x3Ctd>\x3Cinput type="number" value="' + p.flange + '" oninput="editProfile(' + i + ', \'flange\', this.value)">\x3C/td>' +
+      '\x3Ctd>\x3Cinput type="number" class="inp-yellow" value="' + p.thickness + '" oninput="editProfile(' + i + ', \'thickness\', this.value)">\x3C/td>' +
+      '\x3Ctd>\x3Cinput type="number" class="inp-yellow" value="' + p.stripWidth + '" oninput="editProfile(' + i + ', \'stripWidth\', this.value)">\x3C/td>' +
+      '\x3Ctd>\x3Cinput type="text" value="' + p.desc + '" oninput="editProfile(' + i + ', \'desc\', this.value)">\x3C/td>' +
+      '\x3Ctd>\x3Cbutton class="btn btn-red btn-sm" onclick="deleteProfile(' + i + ')">×\x3C/button>\x3C/td>' +
+      '\x3C/tr>';
+  }
+  document.getElementById('profiles-body').innerHTML = html;
+
+  var sel = document.getElementById('m-profile');
+  var curMark = getActiveMark();
+  var optHtml = '\x3Coption value="">— Выберите профиль —\x3C/option>';
+  for (var j = 0; j < state.profiles.length; j++) {
+    var pr = state.profiles[j];
+    optHtml += '\x3Coption value="' + pr.id + '"' + (pr.id === curMark.profileId ? ' selected' : '') + '>' + pr.name + '\x3C/option>';
+  }
+  sel.innerHTML = optHtml;
+}
+
+
+
+
+
+function editProfile(idx, field, val) {
+state.profiles[idx][field] = (field === 'width' || field === 'flange' || field === 'thickness' || field === 'stripWidth') ? (Number(val) || 0) : val;
+saveToStorage();
+renderKincoResults();
+var sel = document.getElementById('m-profile');
+if (sel && sel.options[idx + 1]) sel.options[idx + 1].textContent = state.profiles[idx].name;
+}
+function addProfile() {
+state.profiles.push({ id: 'p' + Date.now(), name: 'Новый профиль', type: 'ПС', width: 100, flange: 50, thickness: 2, stripWidth: 200, desc: '' });
+saveToStorage();
+renderProfiles();
+}
+function deleteProfile(idx) {
+if (state.profiles.length <= 1) { alert('В справочнике должен оставаться хотя бы один профиль.'); return; }
+state.profiles.splice(idx, 1);
+saveToStorage();
+renderAll();
+}
+function saveOrderJson() {
+var ord = getActiveOrder();
+var payload = { type: 'kinco_single_order', settings: state.settings, profiles: state.profiles, order: ord };
+var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+var url = URL.createObjectURL(blob);
+var a = document.createElement('a');
+a.href = url;
+a.download = (ord.name || 'Zakaz').replace(/[\/:*?"<>|]/g, '') + '' + new Date().toISOString().slice(0, 10) + '.json';
+document.body.appendChild(a); a.click(); document.body.removeChild(a);
+URL.revokeObjectURL(url);
+}
+
+function saveFullBackupJson() {
+  var payload = {
+    type: 'kinco_full_backup',
+    exportedAt: new Date().toISOString(),
+    data: state
+  };
+  var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'Kinco_Polnaya_Baza_' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function loadOrderJson(e) {
+  var file = e.target.files.at(0);
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      var parsed = JSON.parse(evt.target.result);
+
+      // 1. Загрузка полной резервной копии базы (все заказы + справочник + настройки)
+      if (parsed && parsed.type === 'kinco_full_backup' && parsed.data && parsed.data.orders) {
+        var backup = parsed.data;
+        var replaceAll = confirm(
+          'В файле найдена полная база (' + backup.orders.length + ' заказ(ов)).\n\n' +
+          'Нажмите ОК, чтобы ЗАМЕНИТЬ текущую базу на загружаемую (включая справочник профилей и настройки).\n' +
+          'Нажмите ОТМЕНА, чтобы ДОБАВИТЬ заказы из файла к текущему списку.'
+        );
+
+        if (replaceAll) {
+          state = backup;
+          if (!state.reportScope) state.reportScope = 'current';
+          saveToStorage();
+          renderAll();
+          alert('Полная база успешно восстановлена!');
+        } else {
+          for (var i = 0; i < backup.orders.length; i++) {
+            var copyOrd = JSON.parse(JSON.stringify(backup.orders[i]));
+            copyOrd.id = 'ord' + (Date.now() + i);
+            state.orders.push(copyOrd);
+          }
+          saveToStorage();
+          renderAll();
+          alert('Добавлено заказов из резервной копии: ' + backup.orders.length);
+        }
+        return;
+      }
+
+      // 2. Загрузка отдельного заказа (новый формат)
+      if (parsed && parsed.order && parsed.order.marks) {
+        var newOrd = parsed.order;
+        newOrd.id = 'ord' + Date.now();
+        state.orders.push(newOrd);
+        state.activeOrderId = newOrd.id;
+        saveToStorage();
+        renderAll();
+        alert('Заказ «' + (newOrd.name || 'Без названия') + '» добавлен в список!');
+        return;
+      }
+
+      // 3. Загрузка файла из старой версии (v7)
+      if (parsed && parsed.marks && parsed.profiles) {
+        var importedOrd = {
+          id: 'ord' + Date.now(),
+          name: file.name.replace(/\.json$/i, ''),
+          createdAt: new Date().toISOString().slice(0, 10),
+          activeMarkId: parsed.activeMarkId || parsed.marks.at(0).id,
+          marks: parsed.marks
+        };
+        state.orders.push(importedOrd);
+        state.activeOrderId = importedOrd.id;
+        saveToStorage();
+        renderAll();
+        alert('Заказ успешно загружен!');
+        return;
+      }
+
+      alert('Неверный формат файла .json.');
+    } catch (err) {
+      alert('Ошибка чтения файла.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+function exportExcelCsv() {
+var isAllOrders = (state.reportScope === 'all');
+var activeOrd = getActiveOrder();
+var targetOrders = isAllOrders ? state.orders : [activeOrd];
+  var scopeTitle = isAllOrders ? 'ВСЕ ЗАКАЗЫ ПРОГРАММЫ' : ('ЗАКАЗ: ' + (activeOrd.name || 'Без названия') + ' от ' + formatOrderDate(activeOrd.createdAt));
+
+
+var lines = [], density = Number(state.settings.density) || 7850, scrapM = (Number(state.settings.scrapMm) || 0) / 1000;
+lines.push('ОБЩИЙ ОТЧЕТ (' + scopeTitle + ')');
+lines.push('Заказ;Толщина мм;Тип профиля;Ширина штрипсы мм;Марка;Длина шт мм;Кол-во шт;Общая длина м.п.;Чистый вес кг;Статус');
+var items = [];
+for (var oIdx = 0; oIdx < targetOrders.length; oIdx++) {
+var ord = targetOrders[oIdx];
+for (var i = 0; i < ord.marks.length; i++) {
+var mk = ord.marks[i], res = calculateMark(mk), prof = getProfileById(mk.profileId);
+var thk = prof ? (Number(prof.thickness) || 0) : 0, sw = prof ? (Number(prof.stripWidth) || 0) : 0;
+var meters = ((Number(mk.length) || 0) * (Number(mk.qty) || 0)) / 1000;
+items.push({ ordName: ord.name || 'Без названия', thk: thk, pName: prof ? prof.name : '-', sw: sw, name: mk.name, len: mk.length, qty: mk.qty, meters: meters, kg: (sw / 1000) * (thk / 1000) * meters * density, ready: res.isReady });
+}
+}
+items.sort(function(a, b) {
+if (a.thk !== b.thk) return a.thk - b.thk;
+if (a.pName !== b.pName) return a.pName.localeCompare(b.pName, 'ru');
+return a.ordName.localeCompare(b.ordName, 'ru');
+});
+var groupsMap = {};
+for (var j = 0; j < items.length; j++) {
+var it = items[j];
+lines.push([it.ordName, it.thk, it.pName, it.sw, it.name, it.len, it.qty, it.meters.toFixed(2).replace('.', ','), it.kg.toFixed(2).replace('.', ','), it.ready ? 'ГОТОВО' : 'ОШИБКА'].join(';'));
+if (it.sw > 0 && it.thk > 0) {
+var key = it.sw + '_' + it.thk;
+if (!groupsMap[key]) groupsMap[key] = { sw: it.sw, thk: it.thk, cleanM: 0 };
+groupsMap[key].cleanM += it.meters;
+}
+}
+lines.push('');
+lines.push('СВОДНАЯ ЗАЯВКА МЕТАЛЛА — ' + scopeTitle + ' (Плотность ' + density + ' кг/м3, Запас ' + (state.settings.scrapMm || 0) + ' мм)');
+lines.push('Ширина штрипсы мм;Толщина мм;Длина по маркам м.п.;Запас м.п.;Итого длина м.п.;Чистый вес кг;Итого вес с запасом кг;Итого вес т');
+for (var k in groupsMap) {
+if (!groupsMap.hasOwnProperty(k)) continue;
+var g = groupsMap[k], totM = g.cleanM + scrapM;
+var cKg = (g.sw / 1000) * (g.thk / 1000) * g.cleanM * density, tKg = (g.sw / 1000) * (g.thk / 1000) * totM * density;
+lines.push([g.sw, g.thk, g.cleanM.toFixed(2).replace('.', ','), scrapM.toFixed(2).replace('.', ','), totM.toFixed(2).replace('.', ','), cKg.toFixed(2).replace('.', ','), tKg.toFixed(2).replace('.', ','), (tKg / 1000).toFixed(3).replace('.', ',')].join(';'));
+}
+var blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+var url = URL.createObjectURL(blob);
+var a = document.createElement('a');
+a.href = url;
+a.download = (isAllOrders ? 'Svodnaya_Vse_Zakazy_' : ((activeOrd.name || 'Zakaz').replace(/[\/:*?"<>|]/g, '') + '')) + new Date().toISOString().slice(0, 10) + '.csv';
+document.body.appendChild(a); a.click(); document.body.removeChild(a);
+URL.revokeObjectURL(url);
+}
+function printAllMarks() {
+  var ord = getActiveOrder(), readyList = [];
+  for (var i = 0; i < ord.marks.length; i++) {
+    var res = calculateMark(ord.marks[i]);
+    if (res.isReady) readyList.push({ mark: ord.marks[i], res: res });
+  }
+  if (readyList.length === 0) {
+    alert('В текущем заказе нет ни одной марки со статусом «ГОТОВО». Исправьте ошибки перед печатью.');
+    return;
+  }
+
+  var container = document.getElementById('print-all-container'), html = '';
+  for (var j = 0; j < readyList.length; j++) {
+    var m = readyList[j].mark, res = readyList[j].res, prof = getProfileById(m.profileId);
+    var profText = prof ? (prof.name + ' (Толщина: ' + prof.thickness + ' мм | Развёртка: ' + prof.stripWidth + ' мм)') : 'Не выбран';
+    var rowsHtml = '';
+    for (var r = 0; r < res.rows49.length; r++) {
+      var row = res.rows49[r];
+      if (row.code === '00') continue;
+      rowsHtml += '\x3Ctr class="row-active">\x3Ctd>\x3Cb>' + r + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb>' + row.mm + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb style="color:#1e40af;">' + row.code + '\x3C/b>\x3C/td>\x3Ctd>' + row.r1 + '\x3C/td>\x3Ctd>' + row.r2 + '\x3C/td>\x3Ctd style="text-align:left;">' + row.comment + '\x3C/td>\x3C/tr>';
+    }
+    html += '\x3Cdiv class="card print-page-break">' +
+      '\x3Cdiv class="card-header">ПРОГРАММА ДЛЯ ПУЛЬТА KINCO — МАРКА ' + (j + 1) + ' ИЗ ' + readyList.length + '\x3C/div>' +
+      '\x3Cdiv class="kinco-summary-box" style="border:1px solid #000; border-radius:6px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.6;">' +
+        '\x3Cdiv>\x3Cb>Заказ:\x3C/b> ' + (ord.name || '—') + ' &nbsp;|&nbsp; \x3Cb>Дата заказа:\x3C/b> ' + formatOrderDate(ord.createdAt) + '\x3C/div>' +
+        '\x3Cdiv>\x3Cb>Марка:\x3C/b> ' + (m.name || '—') + ' &nbsp;|&nbsp; \x3Cb>Длина (L):\x3C/b> ' + (m.length || 0) + ' мм &nbsp;|&nbsp; \x3Cb>Кол-во:\x3C/b> ' + (m.qty || 0) + ' шт.\x3C/div>' +
+        '\x3Cdiv>\x3Cb>Профиль:\x3C/b> ' + profText + '\x3C/div>' +
+      '\x3C/div>' +
+      '\x3Cdiv class="table-wrap">\x3Ctable>\x3Cthead>\x3Ctr>\x3Cth style="width:55px;">№ стр.\x3C/th>\x3Cth>ММ.\x3C/th>\x3Cth>Ш\x3C/th>\x3Cth>Ряд 1\x3C/th>\x3Cth>Ряд 2\x3C/th>\x3Cth>Комментарий\x3C/th>\x3C/tr>\x3C/thead>\x3Ctbody>' + rowsHtml + '\x3C/tbody>\x3C/table>\x3C/div>\x3C/div>';
+  }
+  container.innerHTML = html;
+  document.body.classList.add('printing-all');
+  setTimeout(function() {
+    window.print();
+    document.body.classList.remove('printing-all');
+    container.innerHTML = '';
+  }, 50);
+}
+
+
+function printAllOrdersSummary() {
+  var prevScope = state.reportScope;
+  syncReportScope('all');
+
+  var genTitle = document.getElementById('general-report-title').textContent;
+  var genHead = document.getElementById('general-report-head').innerHTML;
+  var genBody = document.getElementById('general-report-body').innerHTML;
+
+  var sumTitle = document.getElementById('summary-report-title').textContent;
+  var sumBody = document.getElementById('summary-report-body').innerHTML;
+
+  var container = document.getElementById('print-all-container');
+  container.innerHTML =
+    '\x3Cdiv class="card" style="margin-bottom:18px;">' +
+      '\x3Cdiv class="card-header">' + genTitle + '\x3C/div>' +
+      '\x3Cdiv class="table-wrap">\x3Ctable>\x3Cthead>' + genHead + '\x3C/thead>\x3Ctbody>' + genBody + '\x3C/tbody>\x3C/table>\x3C/div>' +
+    '\x3C/div>' +
+    '\x3Cdiv class="card">' +
+      '\x3Cdiv class="card-header">' + sumTitle + '\x3C/div>' +
+      '\x3Cdiv class="table-wrap">\x3Ctable>' +
+        '\x3Cthead>\x3Ctr>\x3Cth>№\x3C/th>\x3Cth>Ширина штрипсы, мм\x3C/th>\x3Cth>Толщина, мм\x3C/th>\x3Cth>Длина по маркам, м.п.\x3C/th>\x3Cth>Запас, м.п.\x3C/th>\x3Cth>Итого длина к заказу, м.п.\x3C/th>\x3Cth>Чистый вес, кг\x3C/th>\x3Cth>Итого вес с запасом, кг\x3C/th>\x3Cth>Итого вес, т\x3C/th>\x3C/tr>\x3C/thead>' +
+        '\x3Ctbody>' + sumBody + '\x3C/tbody>' +
+      '\x3C/table>\x3C/div>' +
+      buildSignaturesHtml() +
+    '\x3C/div>';
+
+
+  document.body.classList.add('printing-all');
+  setTimeout(function() {
+    window.print();
+    document.body.classList.remove('printing-all');
+    container.innerHTML = '';
+    syncReportScope(prevScope);
+  }, 50);
+}
+
+function updateSignatures() {
+  state.settings.sigRole1 = document.getElementById('sig-role1').value;
+  state.settings.sigName1 = document.getElementById('sig-name1').value;
+  state.settings.sigRole2 = document.getElementById('sig-role2').value;
+  state.settings.sigName2 = document.getElementById('sig-name2').value;
+  saveToStorage();
+  renderSignaturesBox();
+}
+
+function buildSignaturesHtml() {
+  var r1 = state.settings.sigRole1 || 'Составил';
+  var n1 = state.settings.sigName1 ? ('/ ' + state.settings.sigName1 + ' /') : '/ ________________________ /';
+  var r2 = state.settings.sigRole2 || 'Утвердил';
+  var n2 = state.settings.sigName2 ? ('/ ' + state.settings.sigName2 + ' /') : '/ ________________________ /';
+
+  return '\x3Cdiv style="margin-top:22px; font-size:13px; line-height:2.2; page-break-inside:avoid;">' +
+    '\x3Cdiv style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;">' +
+      '\x3Cdiv>\x3Cb>' + r1 + ':\x3C/b> ___________________ ' + n1 + '\x3C/div>' +
+      '\x3Cdiv>Дата: «____» ______________ 202__ г.\x3C/div>' +
+    '\x3C/div>' +
+    '\x3Cdiv style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:8px;">' +
+      '\x3Cdiv>\x3Cb>' + r2 + ':\x3C/b> ___________________ ' + n2 + '\x3C/div>' +
+      '\x3Cdiv>Дата: «____» ______________ 202__ г.\x3C/div>' +
+    '\x3C/div>' +
+  '\x3C/div>';
+}
+
+function renderSignaturesBox() {
+  var box = document.getElementById('summary-signatures-box');
+  if (box) box.innerHTML = buildSignaturesHtml();
+}
+
+
+
+function renderAll() {
+document.getElementById('cfg-step').value = state.settings.defaultStep;
+document.getElementById('cfg-dx').value = state.settings.dx;
+document.getElementById('cfg-row').value = state.settings.baseRow;
+document.getElementById('cfg-start-thresh').value = state.settings.startThresh;
+document.getElementById('cfg-start-dist').value = state.settings.startDist;
+document.getElementById('cfg-density').value = state.settings.density;
+document.getElementById('cfg-scrap-mm').value = state.settings.scrapMm;
+document.getElementById('rep-scope-gen').value = state.reportScope || 'current';
+document.getElementById('rep-scope-sum').value = state.reportScope || 'current';
+  document.getElementById('sig-role1').value = state.settings.sigRole1 !== undefined ? state.settings.sigRole1 : 'Инженер-технолог';
+  document.getElementById('sig-name1').value = state.settings.sigName1 || '';
+  document.getElementById('sig-role2').value = state.settings.sigRole2 !== undefined ? state.settings.sigRole2 : 'Руководитель производства';
+  document.getElementById('sig-name2').value = state.settings.sigName2 || '';
+  renderSignaturesBox();
+  renderOrdersBar();
+  renderProfiles();
+  renderMarksBar();
+var m = getActiveMark();
+document.getElementById('m-name').value = m.name;
+document.getElementById('m-profile').value = m.profileId;
+document.getElementById('m-len').value = m.length;
+document.getElementById('m-qty').value = m.qty;
+renderSegmentsTable(false);
+renderKincoResults();
+renderReports();
+}
+loadFromStorage();
+renderAll();
+</script>
+</body>
+</html>
