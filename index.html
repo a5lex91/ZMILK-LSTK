@@ -702,7 +702,7 @@ function calculateMark(mark) {
       used[p] = true;
       used[pairIdx] = true;
       var cmdMm = (baseRow === 2) ? (curX + dx) : curX;
-      commands.push({ mm: cmdMm, code: '11', r1: 1, r2: 1, comment: 'Парный удар (уч. ' + points[p].segNum + ')' });
+      commands.push({ mm: cmdMm, code: '11', r1: 1, r2: 1, comment: '' });
     } else {
       used[p] = true;
       commands.push({
@@ -710,7 +710,7 @@ function calculateMark(mark) {
         code: (baseRow === 2) ? '10' : '01',
         r1: (baseRow === 2) ? 0 : 1,
         r2: (baseRow === 2) ? 1 : 0,
-        comment: 'Один. отв. (уч. ' + points[p].segNum + ')'
+        comment: ''
       });
     }
   }
