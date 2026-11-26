@@ -188,7 +188,7 @@
     <button class="btn btn-light" onclick="document.getElementById('file-loader').click()">📂 Загрузить заказ</button>
     <input type="file" id="file-loader" accept=".json" style="display:none" onchange="loadOrderJson(event)">
     <button class="btn btn-green" onclick="exportExcelCsv()">📊 Экспорт в Excel (.csv)</button>
-    <button class="btn btn-blue" onclick="window.print()">🖨️ Печать / PDF</button>
+    <button class="btn btn-blue" onclick="safePrint()">🖨️ Печать / PDF</button>
     <button class="btn btn-blue" onclick="printAllMarks()">🖨️ Печать всех марок</button>
 	    <button class="btn btn-green" onclick="printAllOrdersSummary()">🖨️ Печать сводного по всем заказам</button>
 
@@ -450,7 +450,7 @@ function loadFromStorage() {
         state.orders = [{
           id: 'ord1',
           name: 'Заказ №1',
-          activeMarkId: oldParsed.activeMarkId || oldParsed.marks.at(0).id,
+          activeMarkId: oldParsed.activeMarkId || oldParsed.marks.slice().shift().id,
           marks: oldParsed.marks
         }];
         state.activeOrderId = 'ord1';
@@ -464,8 +464,8 @@ function getActiveOrder() {
   for (var i = 0; i < state.orders.length; i++) {
     if (state.orders[i].id === state.activeOrderId) return state.orders[i];
   }
-  state.activeOrderId = state.orders.at(0).id;
-  return state.orders.at(0);
+state.activeOrderId = state.orders.slice().shift().id;
+return state.orders.slice().shift();
 }
 
 function getActiveMark() {
@@ -473,8 +473,8 @@ function getActiveMark() {
   for (var i = 0; i < ord.marks.length; i++) {
     if (ord.marks[i].id === ord.activeMarkId) return ord.marks[i];
   }
-  ord.activeMarkId = ord.marks.at(0).id;
-  return ord.marks.at(0);
+ord.activeMarkId = ord.marks.slice().shift().id;
+return ord.marks.slice().shift();
 }
 
 function getProfileById(pid) {
@@ -499,8 +499,17 @@ function formatOrderDate(isoDate) {
   if (!isoDate) return '—';
   var parts = isoDate.split('-');
   if (parts.length !== 3) return isoDate;
-  return parts.at(2) + '.' + parts.at(1) + '.' + parts.at(0);
+  return parts[2] + '.' + parts[1] + '.' + parts[0];
 }
+
+function pluralizeMark(n) {
+  var mod10 = n % 10;
+  var mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return n + ' марка';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return n + ' марки';
+  return n + ' марок';
+}
+
 
 
 function renderOrdersBar() {
@@ -514,7 +523,8 @@ function renderOrdersBar() {
     var o = state.orders[i];
     var selected = (o.id === ord.id) ? ' selected' : '';
     var dStr = o.createdAt ? (' от ' + formatOrderDate(o.createdAt)) : '';
-    html += '\x3Coption value="' + o.id + '"' + selected + '>' + (o.name || 'Без названия') + dStr + ' (' + o.marks.length + ' мар.)\x3C/option>';
+        html += '\x3Coption value="' + o.id + '"' + selected + '>' + (o.name || 'Без названия') + dStr + ' (' + pluralizeMark(o.marks.length) + ')\x3C/option>';
+
   }
   sel.innerHTML = html;
   document.getElementById('order-name-inp').value = ord.name || '';
@@ -535,7 +545,9 @@ function updateOrderName(val) {
   var sel = document.getElementById('order-select');
   for (var i = 0; i < sel.options.length; i++) {
     if (sel.options[i].value === ord.id) {
-      sel.options[i].textContent = (ord.name || 'Без названия') + ' (' + ord.marks.length + ' мар.)';
+      var dStr = ord.createdAt ? (' от ' + formatOrderDate(ord.createdAt)) : '';
+      sel.options[i].textContent = (ord.name || 'Без названия') + dStr + ' (' + pluralizeMark(ord.marks.length) + ')';
+
       break;
     }
   }
@@ -546,7 +558,7 @@ function updateOrderName(val) {
 function addOrder() {
   var newOid = 'ord' + Date.now();
   var newMid = 'm' + (Date.now() + 1);
-  var defProf = state.profiles.length > 0 ? state.profiles.at(0).id : '';
+  var defProf = state.profiles.length > 0 ? state.profiles.slice().shift().id : '';
   state.orders.push({
     id: newOid,
     name: 'Заказ №' + (state.orders.length + 1),
@@ -575,7 +587,7 @@ function duplicateOrder() {
   copy.id = 'ord' + Date.now();
   copy.name = (cur.name || 'Заказ') + ' (копия)';
   for (var i = 0; i < copy.marks.length; i++) copy.marks[i].id = 'm' + (Date.now() + i + 1);
-  copy.activeMarkId = copy.marks.at(0).id;
+  copy.activeMarkId = copy.marks.slice().shift().id;
   state.orders.push(copy);
   state.activeOrderId = copy.id;
   saveToStorage();
@@ -587,7 +599,7 @@ function deleteOrder() {
   var cur = getActiveOrder();
   if (!confirm('Удалить заказ «' + (cur.name || 'Без названия') + '» со всеми его марками?')) return;
   state.orders = state.orders.filter(function(item) { return item.id !== cur.id; });
-  state.activeOrderId = state.orders.at(0).id;
+  state.activeOrderId = state.orders.slice().shift().id;
   saveToStorage();
   renderAll();
 }
@@ -631,7 +643,7 @@ function calculateMark(mark) {
   var commands = [];
   var hasStartPunch = false;
 
-  if (points.length > 0 && points.at(0).x >= startThresh) {
+  if (points.length > 0 && points.slice().shift().x >= startThresh) {
     hasStartPunch = true;
     commands.push({ mm: startDist, code: '11', r1: 1, r2: 1, comment: 'Стартовый удар' });
   }
@@ -931,51 +943,23 @@ function renderKincoResults() {
   }
   document.getElementById('kinco-body').innerHTML = kHtml;
 }
-function printAllMarks() {
-  var ord = getActiveOrder(), readyList = [];
-  for (var i = 0; i < ord.marks.length; i++) {
-    var res = calculateMark(ord.marks[i]);
-    if (res.isReady) readyList.push({ mark: ord.marks[i], res: res });
-  }
-  if (readyList.length === 0) { alert('В текущем заказе нет ни одной марки со статусом «ГОТОВО». Исправьте ошибки перед печатью.'); return; }
 
-  var container = document.getElementById('print-all-container'), html = '';
-  for (var j = 0; j < readyList.length; j++) {
-    var m = readyList[j].mark, res = readyList[j].res, prof = getProfileById(m.profileId);
-    var profText = prof ? (prof.name + ' (Толщина: ' + prof.thickness + ' мм | Развёртка: ' + prof.stripWidth + ' мм)') : 'Не выбран';
-    var rowsHtml = '';
-    for (var r = 0; r < res.rows49.length; r++) {
-      var row = res.rows49[r];
-      if (row.code === '00') continue;
-      rowsHtml += '\x3Ctr class="row-active">\x3Ctd>\x3Cb>' + r + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb>' + row.mm + '\x3C/b>\x3C/td>\x3Ctd>\x3Cb style="color:#1e40af;">' + row.code + '\x3C/b>\x3C/td>\x3Ctd>' + row.r1 + '\x3C/td>\x3Ctd>' + row.r2 + '\x3C/td>\x3Ctd style="text-align:left;">' + row.comment + '\x3C/td>\x3C/tr>';
-    }
-    html += '\x3Cdiv class="card print-page-break">' +
-      '\x3Cdiv class="card-header">ПРОГРАММА ДЛЯ ПУЛЬТА KINCO — МАРКА ' + (j + 1) + ' ИЗ ' + readyList.length + '\x3C/div>' +
-      '\x3Cdiv class="kinco-summary-box" style="border:1px solid #000; border-radius:6px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.6;">' +
-       '\x3Cdiv>\x3Cb>Заказ:\x3C/b> ' + (ord.name || '—') + ' &nbsp;|&nbsp; \x3Cb>Дата заказа:\x3C/b> ' + formatOrderDate(ord.createdAt) + '\x3C/div>' +
-        '\x3Cdiv>\x3Cb>Марка:\x3C/b> ' + (m.name || '—') + ' &nbsp;|&nbsp; \x3Cb>Длина (L):\x3C/b> ' + (m.length || 0) + ' мм &nbsp;|&nbsp; \x3Cb>Кол-во:\x3C/b> ' + (m.qty || 0) + ' шт.\x3C/div>' +
-        '\x3Cdiv>\x3Cb>Профиль:\x3C/b> ' + profText + '\x3C/div>' +
-      '\x3C/div>' +
-      '\x3Cdiv class="table-wrap">\x3Ctable>\x3Cthead>\x3Ctr>\x3Cth style="width:55px;">№ стр.\x3C/th>\x3Cth>ММ.\x3C/th>\x3Cth>Ш\x3C/th>\x3Cth>Ряд 1\x3C/th>\x3Cth>Ряд 2\x3C/th>\x3Cth>Комментарий\x3C/th>\x3C/tr>\x3C/thead>\x3Ctbody>' + rowsHtml + '\x3C/tbody>\x3C/table>\x3C/div>\x3C/div>';
-  }
-  container.innerHTML = html;
-  document.body.classList.add('printing-all');
-  setTimeout(function() { window.print(); document.body.classList.remove('printing-all'); container.innerHTML = ''; }, 50);
-}
 
 function selectMark(mid) { getActiveOrder().activeMarkId = mid; saveToStorage(); renderAll(); }
 
 function addMark() {
-var ord = getActiveOrder();
-var newId = 'm' + Date.now();
-var defProf = state.profiles.length > 0 ? state.profiles.at(0).id : '';
-ord.marks.push({ id: newId, name: 'М-' + (ord.marks.length + 1), profileId: defProf, length: '', qty: 1, segments: [{ step: '', count: '' }] });
-ord.activeMarkId = newId;
-saveToStorage();
-renderAll();
-var nameEl = document.getElementById('m-name');
-if (nameEl) { nameEl.focus(); nameEl.select(); }
+  var ord = getActiveOrder();
+  var newId = 'm' + Date.now();
+  var defProf = state.profiles.length > 0 ? state.profiles.slice().shift().id : '';
+  ord.marks.push({ id: newId, name: 'М-' + (ord.marks.length + 1), profileId: defProf, length: '', qty: 1, segments: [{ step: '', count: '' }] });
+  ord.activeMarkId = newId;
+  saveToStorage();
+  renderAll();
+  var nameEl = document.getElementById('m-name');
+  if (nameEl) { nameEl.focus(); nameEl.select(); }
 }
+
+
 function duplicateMark() {
 var ord = getActiveOrder();
 var cur = getActiveMark();
@@ -988,15 +972,16 @@ saveToStorage();
 renderAll();
 }
 function deleteMark() {
-var ord = getActiveOrder();
-if (ord.marks.length <= 1) { alert('Нельзя удалить единственную марку в заказе.'); return; }
-var cur = getActiveMark();
-if (!confirm('Удалить марку «' + cur.name + '»?')) return;
-ord.marks = ord.marks.filter(function(item) { return item.id !== cur.id; });
-ord.activeMarkId = ord.marks.at(0).id;
-saveToStorage();
-renderAll();
+  var ord = getActiveOrder();
+  if (ord.marks.length <= 1) { alert('Нельзя удалить единственную марку в заказе.'); return; }
+  var cur = getActiveMark();
+  if (!confirm('Удалить марку «' + cur.name + '»?')) return;
+  ord.marks = ord.marks.filter(function(item) { return item.id !== cur.id; });
+  ord.activeMarkId = ord.marks.slice().shift().id;
+  saveToStorage();
+  renderAll();
 }
+
 function syncReportScope(val) {
 state.reportScope = val;
 document.getElementById('rep-scope-gen').value = val;
@@ -1135,48 +1120,53 @@ renderKincoResults();
 var sel = document.getElementById('m-profile');
 if (sel && sel.options[idx + 1]) sel.options[idx + 1].textContent = state.profiles[idx].name;
 }
+
 function addProfile() {
 state.profiles.push({ id: 'p' + Date.now(), name: 'Новый профиль', type: 'ПС', width: 100, flange: 50, thickness: 2, stripWidth: 200, desc: '' });
 saveToStorage();
 renderProfiles();
 }
+
 function deleteProfile(idx) {
 if (state.profiles.length <= 1) { alert('В справочнике должен оставаться хотя бы один профиль.'); return; }
 state.profiles.splice(idx, 1);
 saveToStorage();
 renderAll();
 }
+
 function saveOrderJson() {
-var ord = getActiveOrder();
-var payload = { type: 'kinco_single_order', settings: state.settings, profiles: state.profiles, order: ord };
-var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
-var url = URL.createObjectURL(blob);
-var a = document.createElement('a');
-a.href = url;
-a.download = (ord.name || 'Zakaz').replace(/[\/:*?"<>|]/g, '') + '' + new Date().toISOString().slice(0, 10) + '.json';
-document.body.appendChild(a); a.click(); document.body.removeChild(a);
-URL.revokeObjectURL(url);
+  try {
+    var ord = getActiveOrder();
+    var payload = {
+      type: 'kinco_single_order',
+      settings: state.settings,
+      profiles: state.profiles,
+      order: ord
+    };
+    var cleanName = (ord.name || 'Zakaz').replace(/[^a-zA-Zа-яА-Я0-9_-]/g, '_');
+    var fileName = cleanName + '_' + new Date().toISOString().slice(0, 10) + '.json';
+    downloadOrShareFile(JSON.stringify(payload, null, 2), fileName, 'application/json;charset=utf-8');
+  } catch (err) {
+    alert('Ошибка сохранения: ' + err.message);
+  }
 }
 
 function saveFullBackupJson() {
-  var payload = {
-    type: 'kinco_full_backup',
-    exportedAt: new Date().toISOString(),
-    data: state
-  };
-  var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'Kinco_Polnaya_Baza_' + new Date().toISOString().slice(0, 10) + '.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  try {
+    var payload = {
+      type: 'kinco_full_backup',
+      exportedAt: new Date().toISOString(),
+      data: state
+    };
+    var fileName = 'Kinco_Polnaya_Baza_' + new Date().toISOString().slice(0, 10) + '.json';
+    downloadOrShareFile(JSON.stringify(payload, null, 2), fileName, 'application/json;charset=utf-8');
+  } catch (err) {
+    alert('Ошибка сохранения базы: ' + err.message);
+  }
 }
 
 function loadOrderJson(e) {
-  var file = e.target.files.at(0);
+  var file = e.target.files ? e.target.files.item(0) : null;
   if (!file) return;
   var reader = new FileReader();
   reader.onload = function(evt) {
@@ -1229,7 +1219,7 @@ function loadOrderJson(e) {
           id: 'ord' + Date.now(),
           name: file.name.replace(/\.json$/i, ''),
           createdAt: new Date().toISOString().slice(0, 10),
-          activeMarkId: parsed.activeMarkId || parsed.marks.at(0).id,
+          activeMarkId: parsed.activeMarkId || parsed.marks.slice().shift().id,
           marks: parsed.marks
         };
         state.orders.push(importedOrd);
@@ -1248,6 +1238,74 @@ function loadOrderJson(e) {
   reader.readAsText(file);
   e.target.value = '';
 }
+
+function isAndroidWebView() {
+  var ua = navigator.userAgent || '';
+  return /Android/i.test(ua) && (/wv\)/i.test(ua) || /Version\/\d+\.\d+/i.test(ua));
+}
+
+function downloadOrShareFile(content, filename, mimeType) {
+  var blob = new Blob([content], { type: mimeType });
+
+  if (/Android|iPhone|iPad/i.test(navigator.userAgent || '') && navigator.share && navigator.canShare) {
+    try {
+      var file = new File([blob], filename, { type: mimeType });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({
+          files: [file],
+          title: filename
+        }).catch(function(err) {
+          if (err && err.name !== 'AbortError') {
+            fallbackDownload(blob, filename);
+          }
+        });
+        return;
+      }
+    } catch (e) {}
+  }
+
+  fallbackDownload(blob, filename);
+}
+
+function fallbackDownload(blob, filename) {
+  if (isAndroidWebView()) {
+    try {
+      var reader = new FileReader();
+      reader.onload = function() {
+        var a = document.createElement('a');
+        a.href = reader.result;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+      reader.readAsDataURL(blob);
+      return;
+    } catch (e) {}
+  }
+
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+function safePrint() {
+  if (isAndroidWebView()) {
+    alert('Если окно печати не откроется (ограничение оболочки APK), используйте кнопку «Экспорт в Excel (.csv)» или откройте приложение через браузер Google Chrome.');
+  }
+  try {
+    window.print();
+  } catch (e) {
+    alert('Печать не поддерживается в этой версии оболочки Android.');
+  }
+}
+
+
 function exportExcelCsv() {
 var isAllOrders = (state.reportScope === 'all');
 var activeOrd = getActiveOrder();
@@ -1292,7 +1350,9 @@ var g = groupsMap[k], totM = g.cleanM + scrapM;
 var cKg = (g.sw / 1000) * (g.thk / 1000) * g.cleanM * density, tKg = (g.sw / 1000) * (g.thk / 1000) * totM * density;
 lines.push([g.sw, g.thk, g.cleanM.toFixed(2).replace('.', ','), scrapM.toFixed(2).replace('.', ','), totM.toFixed(2).replace('.', ','), cKg.toFixed(2).replace('.', ','), tKg.toFixed(2).replace('.', ','), (tKg / 1000).toFixed(3).replace('.', ',')].join(';'));
 }
-var blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  var fileName = (isAllOrders ? 'Svodnaya_Vse_Zakazy_' : ((activeOrd.name || 'Zakaz').replace(/[\/:*?"<>|]/g, '') + '_')) + new Date().toISOString().slice(0, 10) + '.csv';
+  downloadOrShareFile('\uFEFF' + lines.join('\r\n'), fileName, 'text/csv;charset=utf-8');
+
 var url = URL.createObjectURL(blob);
 var a = document.createElement('a');
 a.href = url;
@@ -1300,6 +1360,7 @@ a.download = (isAllOrders ? 'Svodnaya_Vse_Zakazy_' : ((activeOrd.name || 'Zakaz'
 document.body.appendChild(a); a.click(); document.body.removeChild(a);
 URL.revokeObjectURL(url);
 }
+
 function printAllMarks() {
   var ord = getActiveOrder(), readyList = [];
   for (var i = 0; i < ord.marks.length; i++) {
@@ -1333,7 +1394,7 @@ function printAllMarks() {
   container.innerHTML = html;
   document.body.classList.add('printing-all');
   setTimeout(function() {
-    window.print();
+    safePrint();
     document.body.classList.remove('printing-all');
     container.innerHTML = '';
   }, 50);
@@ -1369,7 +1430,7 @@ function printAllOrdersSummary() {
 
   document.body.classList.add('printing-all');
   setTimeout(function() {
-    window.print();
+    safePrint();
     document.body.classList.remove('printing-all');
     container.innerHTML = '';
     syncReportScope(prevScope);

@@ -1,7 +1,7 @@
 {
-  "name": "Расчет программы пробивки Kinco",
-  "short_name": "Kinco Пунш",
-  "description": "Расчет координат пробивки профиля и заявок металла для пульта Kinco",
+  "name": "Расчет программы пробивки для пульта Kinco",
+  "short_name": "Kinco",
+  "description": "Расчет программы пробивки и сводной заявки металла для пульта Kinco",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -10,9 +10,9 @@
   "theme_color": "#1e40af",
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://w3.org' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231e40af'/%3E%3Ctext x='256' y='290' font-family='Arial,sans-serif' font-size='150' font-weight='bold' fill='white' text-anchor='middle'%3EKINCO%3C/text%3E%3Ccircle cx='140' cy='380' r='22' fill='%23eab308'/%3E%3Ccircle cx='256' cy='380' r='22' fill='%23eab308'/%3E%3Ccircle cx='372' cy='380' r='22' fill='%23eab308'/%3E%3C/svg%3E",
+      "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
