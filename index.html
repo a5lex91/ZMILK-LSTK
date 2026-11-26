@@ -1335,15 +1335,13 @@ function fallbackDownload(blob, filename) {
 }
 
 function safePrint() {
-  if (isAndroidWebView()) {
-    alert('Если окно печати не откроется (ограничение оболочки APK), используйте кнопку «Экспорт в Excel (.csv)» или откройте приложение через браузер Google Chrome.');
-  }
   try {
     window.print();
   } catch (e) {
-    alert('Печать не поддерживается в этой версии оболочки Android.');
+    alert('Печать не поддерживается в текущей оболочке.');
   }
 }
+
 
 
 function exportExcelCsv() {
