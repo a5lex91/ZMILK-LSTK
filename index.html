@@ -175,6 +175,19 @@
       font-size: 15px;
     }
   }
+.worker-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #000 !important;
+}
+.worker-log-table th,
+.worker-log-table td {
+  border: 1px solid #000 !important;
+  padding: 4px 6px;
+}
+.worker-log-table tr:last-child td {
+  border-bottom: 1.5px solid #000 !important;
+}
 
 </style>
 </head>
@@ -277,7 +290,34 @@
             <thead><tr><th style="width:55px;">№ стр.</th><th>ММ.</th><th>Ш</th><th>Ряд 1</th><th>Ряд 2</th><th>Комментарий</th></tr></thead>
             <tbody id="kinco-body"></tbody>
           </table>
-        </div>
+		   </div>
+		   <div id="kinco-worker-log" style="margin-top:14px; page-break-inside:avoid;">
+        <div style="font-weight:700; font-size:12px; margin-bottom:4px; text-transform:uppercase;">Учет выполнения (заполняется в цеху):</div>
+        <table class="worker-log-table">
+          <thead>
+            <tr>
+              <th style="width:40px;">№</th>
+              <th>Выполнил (ФИО)</th>
+              <th style="width:130px;">Дата</th>
+              <th style="width:110px;">Кол-во, шт.</th>
+              <th style="width:120px;">Подпись</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="height:26px;">1</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td style="height:26px;">2</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td style="height:26px;">3</td><td></td><td></td><td></td><td></td></tr>
+			<tr><td style="height:26px;">4</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td style="height:26px;">5</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td style="height:26px;">6</td><td></td><td></td><td></td><td></td></tr>
+			<tr><td style="height:26px;">7</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td style="height:26px;">8</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td style="height:26px;">9</td><td></td><td></td><td></td><td></td></tr>
+			<tr><td style="height:26px;">10</td><td></td><td></td><td></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+
       </div>
     </div>
   </div>
@@ -1361,6 +1401,36 @@ document.body.appendChild(a); a.click(); document.body.removeChild(a);
 URL.revokeObjectURL(url);
 }
 
+
+function buildWorkerLogHtml() {
+  return '<div style="margin-top:14px; page-break-inside:avoid;">' +
+    '<div style="font-weight:700; font-size:12px; margin-bottom:4px; text-transform:uppercase;">Учет выполнения (заполняется в цеху):</div>' +
+    '<table class="worker-log-table">' +
+      '<thead><tr>' +
+        '<th style="width:40px;">№</th>' +
+        '<th>Выполнил (ФИО)</th>' +
+        '<th style="width:130px;">Дата</th>' +
+        '<th style="width:110px;">Кол-во, шт.</th>' +
+        '<th style="width:120px;">Подпись</th>' +
+      '</tr></thead>' +
+      '<tbody>' +
+        '<tr><td style="height:26px;">1</td><td></td><td></td><td></td><td></td></tr>' +
+        '<tr><td style="height:26px;">2</td><td></td><td></td><td></td><td></td></tr>' +
+        '<tr><td style="height:26px;">3</td><td></td><td></td><td></td><td></td></tr>' +
+		'<tr><td style="height:26px;">4</td><td></td><td></td><td></td><td></td></tr>' +
+        '<tr><td style="height:26px;">5</td><td></td><td></td><td></td><td></td></tr>' +
+        '<tr><td style="height:26px;">6</td><td></td><td></td><td></td><td></td></tr>' +
+		'<tr><td style="height:26px;">7</td><td></td><td></td><td></td><td></td></tr>' +
+		'<tr><td style="height:26px;">8</td><td></td><td></td><td></td><td></td></tr>' +
+        '<tr><td style="height:26px;">9</td><td></td><td></td><td></td><td></td></tr>' +
+        '<tr><td style="height:26px;">10</td><td></td><td></td><td></td><td></td></tr>' +
+      '</tbody>' +
+    '</table>' +
+  '</div>';
+}
+
+
+
 function printAllMarks() {
   var ord = getActiveOrder(), readyList = [];
   for (var i = 0; i < ord.marks.length; i++) {
@@ -1389,7 +1459,8 @@ function printAllMarks() {
         '\x3Cdiv>\x3Cb>Марка:\x3C/b> ' + (m.name || '—') + ' &nbsp;|&nbsp; \x3Cb>Длина (L):\x3C/b> ' + (m.length || 0) + ' мм &nbsp;|&nbsp; \x3Cb>Кол-во:\x3C/b> ' + (m.qty || 0) + ' шт.\x3C/div>' +
         '\x3Cdiv>\x3Cb>Профиль:\x3C/b> ' + profText + '\x3C/div>' +
       '\x3C/div>' +
-      '\x3Cdiv class="table-wrap">\x3Ctable>\x3Cthead>\x3Ctr>\x3Cth style="width:55px;">№ стр.\x3C/th>\x3Cth>ММ.\x3C/th>\x3Cth>Ш\x3C/th>\x3Cth>Ряд 1\x3C/th>\x3Cth>Ряд 2\x3C/th>\x3Cth>Комментарий\x3C/th>\x3C/tr>\x3C/thead>\x3Ctbody>' + rowsHtml + '\x3C/tbody>\x3C/table>\x3C/div>\x3C/div>';
+       '\x3Cdiv class="table-wrap">\x3Ctable>\x3Cthead>\x3Ctr>\x3Cth style="width:55px;">№ стр.\x3C/th>\x3Cth>ММ.\x3C/th>\x3Cth>Ш\x3C/th>\x3Cth>Ряд 1\x3C/th>\x3Cth>Ряд 2\x3C/th>\x3Cth>Комментарий\x3C/th>\x3C/tr>\x3C/thead>\x3Ctbody>' + rowsHtml + '\x3C/tbody>\x3C/table>\x3C/div>' + buildWorkerLogHtml() + '\x3C/div>';
+
   }
   container.innerHTML = html;
   document.body.classList.add('printing-all');
@@ -1498,6 +1569,49 @@ renderSegmentsTable(false);
 renderKincoResults();
 renderReports();
 }
+
+function downloadOrShareFile(content, filename, mimeType) {
+  var blob = new Blob([content], { type: mimeType });
+
+  if (window.median || window.gonative) {
+    try {
+      var reader = new FileReader();
+      reader.onload = function() {
+        var base64Data = reader.result;
+        if (window.median && median.share && median.share.downloadFile) {
+          median.share.downloadFile({ url: base64Data, filename: filename });
+        } else {
+          var a = document.createElement('a');
+          a.href = base64Data;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      };
+      reader.readAsDataURL(blob);
+      return;
+    } catch (e) {}
+  }
+
+  fallbackDownload(blob, filename);
+}
+
+function safePrint() {
+  if (window.median && median.screen && typeof median.screen.print === 'function') {
+    median.screen.print();
+    return;
+  }
+  if (window.gonative) {
+    window.location.href = 'gonative://screen/print';
+    return;
+  }
+  window.print();
+}
+
+
+
+
 loadFromStorage();
 renderAll();
 </script>
